@@ -2,12 +2,23 @@ import { View, TextInput, Text, StyleSheet, Button, ActivityIndicator, KeyboardA
 import React, { useState, Component } from 'react';
 import {FIREBASE_AUTH} from '../../FirebaseConfig';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth'; 
+import {getFirestore, doc, setDoc} from "firebase/firestore";
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+
+
+type AuthStackParamList = {
+    Login: undefined;
+    SignUp: undefined;
+};
+type LoginScreenNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'Login'>;
 
 const Login = () => {
     const [email, setEmail] = useState('');
     const [password, setpassword] = useState('');
     const [loading, setloading] = useState(false);
     const auth = FIREBASE_AUTH;
+    const navigation = useNavigation<LoginScreenNavigationProp>();
 
     const signIn = async() => {
         setloading(true);
@@ -23,19 +34,6 @@ const Login = () => {
         }
     }
 
-    const signUp = async() => {
-        setloading(true);
-        try{
-            const response = await createUserWithEmailAndPassword(auth, email, password);
-            console.log(response);
-            alert('Check your emails!')
-        }catch(error: any){
-            console.log(error);
-            alert('Sign in failed: ' + error.message);
-        }finally{
-            setloading(false);
-        }
-    }
   return(
     <View style={styles.container}>
         <KeyboardAvoidingView behavior= 'padding'>
@@ -46,7 +44,7 @@ const Login = () => {
             ) : (
             <>
             <Button title="Login" onPress={() => signIn()}/>   
-            <Button title="Create Account" onPress={() => signUp()}/>   
+            <Button title="Create Account" onPress={() => navigation.navigate('SignUp')} />   
             
             </> 
             )}
