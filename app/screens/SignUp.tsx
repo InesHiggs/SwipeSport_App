@@ -5,6 +5,7 @@ import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { getFirestore, doc, setDoc } from "firebase/firestore";
 import { NavigationContainerProps } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { collection, addDoc } from "firebase/firestore"; 
 
 const db = getFirestore();
 type SignUpProps = NativeStackScreenProps<any, 'SignUp'>;
@@ -26,13 +27,21 @@ const SignUp: React.FC<SignUpProps> = ({ navigation }) => {
             const user = response.user;
 
             // Store additional user data in Firestore
-            await setDoc(doc(db, "users", user.uid), {
+            //await setDoc(doc(db, "Users", user.uid), {
+            //    name: name,
+            //    age: age,
+            //    gender: gender,
+            //    level: level,
+            //    email: email,
+            //});
+
+            const docRef = await addDoc(collection(db, "users"), {
+                email: email,
                 name: name,
                 age: age,
                 gender: gender,
                 level: level,
-                email: email,
-            });
+              });
 
             alert('Account created successfully!');
             navigation.navigate('Login'); // Redirect back to Login after sign-up
