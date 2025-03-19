@@ -1,31 +1,34 @@
 import { View, TextInput, Text, StyleSheet, Button, ActivityIndicator, KeyboardAvoidingView } from 'react-native';
 import React, { useState, Component } from 'react';
-import {FIREBASE_AUTH} from '../../FirebaseConfig';
+import { FIREBASE_AUTH } from '@/FirebaseConfig';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth'; 
 import {getFirestore, doc, setDoc} from "firebase/firestore";
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-
+import {useRouter} from "expo-router";
 
 type AuthStackParamList = {
     Login: undefined;
     SignUp: undefined;
 };
-type LoginScreenNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'Login'>;
+
+const router = useRouter();//using Expo router for nav
+
+//type LoginScreenNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'Login'>;
 
 const Login = () => {
     const [email, setEmail] = useState('');
     const [password, setpassword] = useState('');
     const [loading, setloading] = useState(false);
     const auth = FIREBASE_AUTH;
-    const navigation = useNavigation<LoginScreenNavigationProp>();
 
     const signIn = async() => {
         setloading(true);
         try{
             const response = await signInWithEmailAndPassword(auth, email, password);
-            console.log(response);
+            console.log("Login Successful",response);
             alert('Check your emails!')
+            router.replace("../home");//go to the home page
         }catch(error: any){
             console.log(error);
             alert('Sign in failed: ' + error.message);
@@ -44,7 +47,7 @@ const Login = () => {
             ) : (
             <>
             <Button title="Login" onPress={() => signIn()}/>   
-            <Button title="Create Account" onPress={() => navigation.navigate('SignUp')} />   
+            <Button title="Create Account" onPress={() => router.push('/auth/signup')} />   
             
             </> 
             )}
