@@ -3,7 +3,7 @@ import React from 'react';
 import { Text, View, StyleSheet, TouchableOpacity, ImageBackground } from 'react-native';
 import { useRouter } from 'expo-router';
 import { signOut } from 'firebase/auth'; 
-import { FIREBASE_AUTH } from '../../FirebaseConfig';
+import { FIREBASE_AUTH } from '../FirebaseConfig';
 
 const HomeScreen = () => {
   const router = useRouter();
@@ -47,8 +47,8 @@ const HomeScreen = () => {
           <Text style={styles.buttonText}>Chats</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.button} onPress={FIREBASE_AUTH.signOut()}>
-          <Text style={styles.buttonText}>Log out</Text>
+        <TouchableOpacity style={styles.button} onPress={handleSignOut}>
+        <Text style={styles.buttonText}>Log out</Text>
         </TouchableOpacity>
 
       </View>

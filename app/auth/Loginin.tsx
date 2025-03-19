@@ -28,7 +28,7 @@ const Login = () => {
             const response = await signInWithEmailAndPassword(auth, email, password);
             console.log("Login Successful",response);
             alert('Check your emails!')
-            router.replace("../home");//go to the home page
+            router.replace("/");//go to the home page
         }catch(error: any){
             console.log(error);
             alert('Sign in failed: ' + error.message);

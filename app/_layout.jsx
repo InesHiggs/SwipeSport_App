@@ -13,7 +13,7 @@ const RootLayout = () => {
       if(!user){
         router.replace("/auth/login"); //If user not authenticated -> login page
       } else{
-        router.replace("/home"); //Go to home page if auth
+        router.replace("/"); //Go to home page if auth
       }
     });
     return () => unsubscribe();
