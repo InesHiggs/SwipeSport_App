@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, Image, TouchableOpacity, StyleSheet, ImageBackground } from "react-native";
+import { View, Text, Image, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ImageBackground } from "react-native";
 import { Button, Menu, Provider, TextInput } from "react-native-paper";
 import * as ImagePicker from "expo-image-picker";
 import { FIREBASE_AUTH, FIRESTORE_DB } from "@/FirebaseConfig"; // Ensure correct path
@@ -76,53 +76,59 @@ const ProfileScreen = () => {
     };
 
     return (
-        <ImageBackground source={require("@/assets/images/background.png")} style={styles.container}>
-            <Provider>
-                <View style={styles.container}>
-                    {/* Profile Picture with Edit Icon */}
-                    <View style={styles.profileContainer}>
-                        <TouchableOpacity onPress={pickImage} style={styles.profilePicWrapper}>
-                            <Image
-                                source={image ? { uri: image } : require("@/assets/images/bgd.png")}
-                                style={styles.profilePic}
-                            />
-                            <View style={styles.editIcon}>
-                                <MaterialIcons name="edit" size={20} color="white" />
-                            </View>
-                        </TouchableOpacity>
+        <KeyboardAvoidingView
+              style={{ flex: 1 }}
+              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+              //keyboardVerticalOffset={130} // adjust based on header height
+        >
+            <ImageBackground source={require("@/assets/images/background.png")} style={styles.container}>
+                <Provider>
+                    <View style={styles.container}>
+                        {/* Profile Picture with Edit Icon */}
+                        <View style={styles.profileContainer}>
+                            <TouchableOpacity onPress={pickImage} style={styles.profilePicWrapper}>
+                                <Image
+                                    source={image ? { uri: image } : require("@/assets/images/bgd.png")}
+                                    style={styles.profilePic}
+                                />
+                                <View style={styles.editIcon}>
+                                    <MaterialIcons name="edit" size={20} color="white" />
+                                </View>
+                            </TouchableOpacity>
+                        </View>
+
+                        {/* Name Input */}
+                        <TextInput
+                            label="Name"
+                            mode="outlined"
+                            value={name}
+                            onChangeText={setName}
+                            style={styles.input}
+                        />
+
+                        {/* Gender Selection */}
+                        <Menu
+                            visible={genderMenuVisible}
+                            onDismiss={() => setGenderMenuVisible(false)}
+                            anchor={
+                                <Button mode="outlined" onPress={() => setGenderMenuVisible(true)} style={styles.input}>
+                                    {gender}
+                                </Button>
+                            }
+                        >
+                            <Menu.Item onPress={() => { setGender("Male"); setGenderMenuVisible(false); }} title="Male" />
+                            <Menu.Item onPress={() => { setGender("Female"); setGenderMenuVisible(false); }} title="Female" />
+                            <Menu.Item onPress={() => { setGender("Other"); setGenderMenuVisible(false); }} title="Other" />
+                        </Menu>
+
+                        {/* Save Button */}
+                        <Button mode="contained" onPress={handleUpdateProfile} style={styles.saveButton}>
+                            Save Changes
+                        </Button>
                     </View>
-
-                    {/* Name Input */}
-                    <TextInput
-                        label="Name"
-                        mode="outlined"
-                        value={name}
-                        onChangeText={setName}
-                        style={styles.input}
-                    />
-
-                    {/* Gender Selection */}
-                    <Menu
-                        visible={genderMenuVisible}
-                        onDismiss={() => setGenderMenuVisible(false)}
-                        anchor={
-                            <Button mode="outlined" onPress={() => setGenderMenuVisible(true)} style={styles.input}>
-                                {gender}
-                            </Button>
-                        }
-                    >
-                        <Menu.Item onPress={() => { setGender("Male"); setGenderMenuVisible(false); }} title="Male" />
-                        <Menu.Item onPress={() => { setGender("Female"); setGenderMenuVisible(false); }} title="Female" />
-                        <Menu.Item onPress={() => { setGender("Other"); setGenderMenuVisible(false); }} title="Other" />
-                    </Menu>
-
-                    {/* Save Button */}
-                    <Button mode="contained" onPress={handleUpdateProfile} style={styles.saveButton}>
-                        Save Changes
-                    </Button>
-                </View>
-            </Provider>
-        </ImageBackground>
+                </Provider>
+            </ImageBackground>
+        </KeyboardAvoidingView>
     );
 };
 
