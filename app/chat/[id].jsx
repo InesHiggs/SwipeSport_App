@@ -1,24 +1,90 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import MessageBubble from '@/app/components/MessageBubble';
-
-// Hardcoded messages for each chat
-const messagesData = {
-  1: [{ id: 1, text: 'Hey!', sender: 'them' }, { id: 2, text: 'How are youuu?', sender: 'them' }],
-  2: [{ id: 1, text: 'See you later!', sender: 'them' }, { id: 2, text: 'Bye!', sender: 'me' }],
-  3: [{ id: 1, text: 'Let’s meet tomorrow.', sender: 'them' }, { id: 2, text: 'Sure!', sender: 'me' }],
-};
+import { getAuth } from 'firebase/auth';
+import {collection,getDocs,addDoc,doc,setDoc,query,orderBy,onSnapshot,serverTimestamp}
+from 'firebase/firestore';
+import { FIRESTORE_DB } from '@/FirebaseConfig';
 
 const ChatPage = () => {
-  const { id } = useLocalSearchParams();
   const router = useRouter();
-  const [messages, setMessages] = useState(messagesData[id] || []);
+  const otherUserId = '4OFc9RdS6eY4RXT4HuTDfx1DBXm2'; // Hardcoded for now -> bogdan
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
+  const [chatId, setChatId] = useState(null);
+  const currentUser = getAuth().currentUser;
 
-  const sendMessage = () => {
-    if (input.trim() === '') return;
-    setMessages([...messages, { id: messages.length + 1, text: input, sender: 'me' }]);
+  // Check or create chat
+  useEffect(() => {
+    if (!currentUser || !otherUserId) return;
+    checkOrCreateChat();
+  }, [currentUser, otherUserId]);
+
+  // Listen to real-time messages when chatId is known
+  useEffect(() => {
+    if (!chatId) return;
+
+    const messagesRef = collection(FIRESTORE_DB, 'chats', chatId, 'messages');
+    const q = query(messagesRef, orderBy('timestamp', 'asc'));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const msgs = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setMessages(msgs);
+    });
+
+    return () => unsubscribe();
+  }, [chatId]);
+
+  const checkOrCreateChat = async () => {
+    try {
+      const chatsRef = collection(FIRESTORE_DB, 'chats');
+      const chatsSnapshot = await getDocs(chatsRef);
+
+      for (const chatDoc of chatsSnapshot.docs) {
+        const usersRef = collection(FIRESTORE_DB, 'chats', chatDoc.id, 'users');
+        const usersSnapshot = await getDocs(usersRef);
+        const userIds = usersSnapshot.docs.map(doc => doc.id);
+
+        if (
+          userIds.includes(currentUser.uid) &&
+          userIds.includes(otherUserId) &&
+          userIds.length === 2
+        ) {
+          console.log('Chat already exists:', chatDoc.id);
+          setChatId(chatDoc.id);
+          return;
+        }
+      }
+
+      const newChatRef = await addDoc(chatsRef, {
+        createdAt: serverTimestamp()
+      });
+
+      await setDoc(doc(FIRESTORE_DB, 'chats', newChatRef.id, 'users', currentUser.uid), { exists: true });
+      await setDoc(doc(FIRESTORE_DB, 'chats', newChatRef.id, 'users', otherUserId), { exists: true });
+
+      console.log('Chat created with ID:', newChatRef.id);
+      setChatId(newChatRef.id);
+    } catch (error) {
+      console.error('Error creating chat:', error);
+    }
+  };
+
+  const sendMessage = async () => {
+    if (!input.trim() || !chatId || !currentUser) return;
+
+    const messagesRef = collection(FIRESTORE_DB, 'chats', chatId, 'messages');
+
+    await addDoc(messagesRef, {
+      text: input.trim(),
+      senderId: currentUser.uid,
+      timestamp: serverTimestamp()
+    });
+
     setInput('');
   };
 

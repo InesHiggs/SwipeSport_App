@@ -12,7 +12,6 @@ type AuthStackParamList = {
     SignUp: undefined;
 };
 
-const router = useRouter();//using Expo router for nav
 
 //type LoginScreenNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'Login'>;
 
@@ -21,7 +20,8 @@ const Login = () => {
     const [password, setpassword] = useState('');
     const [loading, setloading] = useState(false);
     const auth = FIREBASE_AUTH;
-
+    const router = useRouter();//using Expo router for nav
+    
     const signIn = async() => {
         setloading(true);
         try{
