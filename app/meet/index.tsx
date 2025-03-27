@@ -217,8 +217,8 @@ export default function MeetScreen() {
   };
   
   // Format availability days as a readable string
-  const formatAvailability = (days: string[]): string => {
-    if (days.length === 0) return "Not specified";
+  const formatAvailability = (days: string[] | undefined | null): string => {
+    if (!days || days.length === 0) return "Not specified";
     if (days.length <= 3) return days.join(", ");
     return `${days.slice(0, 2).join(", ")} +${days.length - 2} more`;
   };

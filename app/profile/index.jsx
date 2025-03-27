@@ -27,6 +27,7 @@ const ProfileScreen = () => {
   const [level, setLevel] = useState("Select Level");
   const [availability, setAvailability] = useState([]);
   const [levelMenuVisible, setLevelMenuVisible] = useState(false);
+  const [levelPreferences, setLevelPreferences] = useState([]);
 
   const router = useRouter();
   
@@ -46,6 +47,7 @@ const ProfileScreen = () => {
           setImage(userData.image || null);
           setLevel(userData.level || "Select Level");
           setAvailability(userData.availability || []);
+          setLevelPreferences(userData.levelPreference || []);
         }
       }
     });
@@ -139,6 +141,10 @@ const ProfileScreen = () => {
     });
   };
 
+  const navigateToLevelPreferences = () => {
+    router.push("/level_preference");
+  };
+
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
@@ -188,9 +194,29 @@ const ProfileScreen = () => {
               level,
               levelMenuVisible,
               setLevelMenuVisible,
-              ["Beginner", "Intermediate", "Advanced", "Professional", "Expert"],
+              ["Beginner", "Novice", "Intermediate", "Advanced", "Pro", "Expert"],
               setLevel
             )}
+            
+            {/* Level Preferences Button */}
+            <View style={styles.preferenceSection}>
+              <View style={styles.preferenceHeader}>
+                <Text style={styles.availabilityTitle}>Level Preferences</Text>
+                <Text style={styles.preferenceSummary}>
+                  {levelPreferences.length > 0 
+                    ? levelPreferences.join(", ") 
+                    : "No preferences set"}
+                </Text>
+              </View>
+              <Button
+                mode="outlined"
+                onPress={navigateToLevelPreferences}
+                style={styles.preferenceButton}
+                icon="tune"
+              >
+                Edit Level Preferences
+              </Button>
+            </View>
 
             {/* Availability Multiple Select */}
             <View style={styles.availabilitySection}>
@@ -323,6 +349,24 @@ const styles = StyleSheet.create({
   saveButton: {
     marginTop: 20,
     backgroundColor: "#863f9c",
+  },
+  preferenceSection: {
+    marginBottom: 20,
+  },
+  preferenceHeader: {
+    flexDirection: "column",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+  preferenceSummary: {
+    fontSize: 14,
+    color: "#666",
+    marginBottom: 8,
+    fontStyle: "italic",
+  },
+  preferenceButton: {
+    borderColor: "#c4a8ff",
+    borderWidth: 1,
   },
 });
 
