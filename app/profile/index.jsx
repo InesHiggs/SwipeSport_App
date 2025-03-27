@@ -25,11 +25,12 @@ const ProfileScreen = () => {
   const [birthdate, setBirthdate] = useState(null);
   const [userId, setUserId] = useState(null);
   const [level, setLevel] = useState("Select Level");
-  const [availability, setAvailability] = useState("Select Availability");
+  const [availability, setAvailability] = useState([]);
   const [levelMenuVisible, setLevelMenuVisible] = useState(false);
-  const [availabilityMenuVisible, setAvailabilityMenuVisible] = useState(false);
 
   const router = useRouter();
+  
+  const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(FIREBASE_AUTH, async (user) => {
@@ -44,7 +45,7 @@ const ProfileScreen = () => {
           setBirthdate(userData.birthdate ? new Date(userData.birthdate) : null);
           setImage(userData.image || null);
           setLevel(userData.level || "Select Level");
-          setAvailability(userData.availability || "Select Availability");
+          setAvailability(userData.availability || []);
         }
       }
     });
@@ -128,6 +129,16 @@ const ProfileScreen = () => {
     </View>
   );
 
+  const toggleAvailabilityDay = (day) => {
+    setAvailability((prevAvailability) => {
+      if (prevAvailability.includes(day)) {
+        return prevAvailability.filter((d) => d !== day);
+      } else {
+        return [...prevAvailability, day];
+      }
+    });
+  };
+
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
@@ -161,7 +172,7 @@ const ProfileScreen = () => {
               style={styles.input}
             />
 
-            {/* Dropdowns */}
+            {/* Gender Dropdown */}
             {renderDropdownWithMenu(
               "Gender",
               gender,
@@ -171,6 +182,7 @@ const ProfileScreen = () => {
               setGender
             )}
 
+            {/* Level Dropdown */}
             {renderDropdownWithMenu(
               "Level",
               level,
@@ -180,14 +192,30 @@ const ProfileScreen = () => {
               setLevel
             )}
 
-            {renderDropdownWithMenu(
-              "Availability",
-              availability,
-              availabilityMenuVisible,
-              setAvailabilityMenuVisible,
-              ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
-              setAvailability
-            )}
+            {/* Availability Multiple Select */}
+            <View style={styles.availabilitySection}>
+              <Text style={styles.availabilityTitle}>Availability</Text>
+              <Text style={styles.availabilitySubtitle}>Select all days you're available</Text>
+              <View style={styles.daysContainer}>
+                {daysOfWeek.map((day) => (
+                  <TouchableOpacity
+                    key={day}
+                    style={[
+                      styles.dayButton,
+                      availability.includes(day) && styles.selectedDayButton
+                    ]}
+                    onPress={() => toggleAvailabilityDay(day)}
+                  >
+                    <Text style={[
+                      styles.dayText,
+                      availability.includes(day) && styles.selectedDayText
+                    ]}>
+                      {day.substring(0, 3)}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
 
             {/* Save Button */}
             <Button
@@ -249,6 +277,48 @@ const styles = StyleSheet.create({
     zIndex: 1,
     color: "#555",
     backgroundColor: "#d8b4fe",
+  },
+  availabilitySection: {
+    marginBottom: 20,
+  },
+  availabilityTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    marginBottom: 5,
+    color: "#333",
+  },
+  availabilitySubtitle: {
+    fontSize: 12,
+    marginBottom: 10,
+    color: "#666",
+  },
+  daysContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    marginTop: 5,
+  },
+  dayButton: {
+    width: '31%',
+    paddingVertical: 10,
+    marginBottom: 10,
+    backgroundColor: "#f0e6ff",
+    borderRadius: 8,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#c4a8ff",
+  },
+  selectedDayButton: {
+    backgroundColor: "#863f9c",
+    borderColor: "#7e22ce",
+  },
+  dayText: {
+    color: "#333",
+    fontWeight: "500",
+  },
+  selectedDayText: {
+    color: "#fff",
+    fontWeight: "bold",
   },
   saveButton: {
     marginTop: 20,
