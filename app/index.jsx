@@ -34,6 +34,12 @@ const HomeScreen = () => {
 
           <View style={styles.buttonContainer}>
             <CustomButton text="Profile" onPress={() => router.push('/profile')} />
+            <CustomButton 
+              text="Find Partners" 
+              onPress={() => router.push('/meet')} 
+              style={styles.highlightButton} 
+              textStyle={styles.highlightButtonText} 
+            />
             <CustomButton text="Accepted" onPress={() => router.push('/accepted_people')} />
             <CustomButton text="Chats" onPress={() => router.push('/chat')} />
             <CustomButton text="Log out" onPress={handleSignOut} />
@@ -44,9 +50,13 @@ const HomeScreen = () => {
   );
 };
 
-const CustomButton = ({ text, onPress }) => (
-  <TouchableOpacity style={styles.button} onPress={onPress} activeOpacity={0.8}>
-    <Text style={styles.buttonText}>{text}</Text>
+const CustomButton = ({ text, onPress, style, textStyle }) => (
+  <TouchableOpacity 
+    style={[styles.button, style]} 
+    onPress={onPress} 
+    activeOpacity={0.8}
+  >
+    <Text style={[styles.buttonText, textStyle]}>{text}</Text>
   </TouchableOpacity>
 );
 
@@ -96,6 +106,14 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     letterSpacing: 0.5,
+  },
+  highlightButton: {
+    backgroundColor: '#ff6b6b',
+    borderWidth: 1,
+    borderColor: '#fff',
+  },
+  highlightButtonText: {
+    fontWeight: '700',
   },
 });
 
