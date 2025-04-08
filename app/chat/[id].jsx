@@ -5,10 +5,13 @@ import MessageBubble from '@/app/components/MessageBubble';
 import { getAuth } from 'firebase/auth';
 import {collection,getDocs,addDoc,doc,setDoc,query,orderBy,onSnapshot,serverTimestamp}from 'firebase/firestore';
 import { FIRESTORE_DB } from '@/FirebaseConfig';
+import { useLocalSearchParams } from 'expo-router';
+
 
 const ChatPage = () => {
   const router = useRouter();
-  const otherUserId = '4OFc9RdS6eY4RXT4HuTDfx1DBXm2'; // Hardcoded for now -> bogdan
+  //const otherUserId = '06Fr4v5wpbTcGuUVyvm7np0d8Yg1'; // Hardcoded for now -> fuck bogdan
+  const { otherUserId } = useLocalSearchParams(); // this replaces the hardcoded ID
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [chatId, setChatId] = useState(null);
@@ -22,6 +25,7 @@ const ChatPage = () => {
 
   // Listen to real-time messages when chatId is known
   useEffect(() => {
+    
     if (!chatId) return;
 
     const messagesRef = collection(FIRESTORE_DB, 'chats', chatId, 'messages');
