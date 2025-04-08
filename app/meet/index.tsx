@@ -244,13 +244,8 @@ export default function MeetScreen() {
         console.log("Matched index (ref):", swipedIndex);
         console.log("Matched profile (ref):", swipedProfile);
         console.log("ProfileId:", swipedProfile.uid);
-           router.push({
-            pathname: '/chat',
-            params: { otherUserId: swipedProfile.uid }, // Replace with actual ID
-          });
-       
-          
-
+        
+        router.push(`/chat/${swipedProfile.uid}`);
       }
     });
   };

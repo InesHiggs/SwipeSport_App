@@ -6,7 +6,7 @@ import ChatItem from '@/app/components/ChatItem';
 const chats = [
   { id: 1, name: 'John Doe', lastMessage: 'Hey, how are you?', time: '10:30 AM' },
   { id: 2, name: 'Jane Smith', lastMessage: 'See you later!', time: '9:15 AM' },
-  { id: 3, name: 'Alice Johnson', lastMessage: 'Let’s meet tomorrow.', time: 'Yesterday' },
+  { id: '06Fr4v5wpbTcGuUVyvm7np0d8Yg1', name: 'Alice Johnson', lastMessage: 'Let’s meet tomorrow.', time: 'Yesterday' },
 ];
 
 const ChatsListPage = () => {
