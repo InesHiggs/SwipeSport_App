@@ -1,21 +1,62 @@
-import React from 'react';
-import { View, Text, FlatList, StyleSheet } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity, Text } from 'react-native';
+import { useRouter } from 'expo-router';
+import { getAuth } from 'firebase/auth';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { FIRESTORE_DB } from '@/FirebaseConfig';
 import ChatItem from '@/app/components/ChatItem';
 
-// Hardcoded list of chats
-const chats = [
-  { id: 1, name: 'John Doe', lastMessage: 'Hey, how are you?', time: '10:30 AM' },
-  { id: 2, name: 'Jane Smith', lastMessage: 'See you later!', time: '9:15 AM' },
-  { id: 3, name: 'Alice Johnson', lastMessage: 'Let’s meet tomorrow.', time: 'Yesterday' },
-];
-
 const ChatsListPage = () => {
+  const [chats, setChats] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const currentUser = getAuth().currentUser;
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const chatsRef = collection(FIRESTORE_DB, 'chats');
+    const q = query(chatsRef, where(`users.${currentUser.uid}`, '==', true));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const chatsData = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setChats(chatsData);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [currentUser]);
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#007bff" />
+      </View>
+    );
+  }
+
+  const openChat = (chatId) => {
+    router.push(`/chats/${chatId}`);
+  };
+
   return (
     <View style={styles.container}>
       <FlatList
         data={chats}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item }) => <ChatItem chat={item} />}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <TouchableOpacity onPress={() => openChat(item.id)}>
+            <ChatItem chat={item} />
+          </TouchableOpacity>
+        )}
+        ListEmptyComponent={() => (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No chats available</Text>
+          </View>
+        )}
       />
     </View>
   );
@@ -27,11 +68,20 @@ const styles = StyleSheet.create({
     backgroundColor: '#f4f4f4',
     padding: 20,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 20,
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#999',
   },
 });
 
