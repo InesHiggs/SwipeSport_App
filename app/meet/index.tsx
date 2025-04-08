@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, Image, StyleSheet, Dimensions, Animated, PanResponder } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FIREBASE_AUTH, FIRESTORE_DB } from '@/FirebaseConfig';
@@ -7,7 +7,10 @@ import { User, sampleUser } from '@/models/user';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
 import { ActivityIndicator } from 'react-native-paper';
+import { useRouter } from 'expo-router';
 
+
+const router = useRouter();
 const { width, height } = Dimensions.get('window');
 const CARD_WIDTH = width * 0.9;
 const CARD_HEIGHT = height * 0.7;
@@ -21,6 +24,10 @@ export default function MeetScreen() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    console.log("Profiles updated:", profiles);
+  }, [profiles]);
   
   // Animation values
   const position = new Animated.ValueXY();
@@ -71,6 +78,7 @@ export default function MeetScreen() {
       if (gesture.dx > SWIPE_THRESHOLD) {
         // Swipe right (like)
         swipeCard('right');
+        //todo: Add logic to handle liking a profile      
       } else if (gesture.dx < -SWIPE_THRESHOLD) {
         // Swipe left (dislike)
         swipeCard('left');
@@ -124,7 +132,7 @@ export default function MeetScreen() {
                 const daysInCommonB = daysInCommon(userData.availability, b.availability);
                 return daysInCommonB - daysInCommonA;
               });
-              
+            console.log("test, pot  profiles:", potentialMatches);  
             setProfiles(potentialMatches);
           }
         } else {
@@ -178,7 +186,7 @@ export default function MeetScreen() {
               const daysInCommonB = daysInCommon(sampleUser.availability, b.availability);
               return daysInCommonB - daysInCommonA;
             });
-            
+          console.log("test, filtered profiles:", filteredProfiles);  
           setProfiles(filteredProfiles);
         }
       } catch (error) {
@@ -196,16 +204,39 @@ export default function MeetScreen() {
     position.setValue({ x: 0, y: 0 });
   }, [currentIndex]);
 
+  const currentIndexRef = useRef(currentIndex);
+
+  // Keep ref in sync with latest state
+  useEffect(() => {
+    currentIndexRef.current = currentIndex;
+  }, [currentIndex]);
+
+  const profilesRef = useRef(profiles);
+
+  useEffect(() => {
+    profilesRef.current = profiles;
+  }, [profiles]);
+
+
+
+  
   const swipeCard = (direction: 'left' | 'right') => {
     const x = direction === 'right' ? width + 100 : -width - 100;
-    
+  
+    // ✅ Capture live values from refs
+    console.log("Profiles at time of swipe:", profiles);
+
+    const swipedIndex = currentIndexRef.current;
+    const swipedProfile = profilesRef.current[swipedIndex];
+  
     Animated.timing(position, {
       toValue: { x, y: 0 },
       duration: 300,
       useNativeDriver: true,
     }).start(() => {
-      // Move to next card after animation completes
-      setCurrentIndex(prevIndex => prevIndex + 1);
+  
+      // Move to next card
+      setCurrentIndex(prev => prev + 1);
       position.setValue({ x: 0, y: 0 });
   
       if (direction === 'right') {
@@ -218,6 +249,11 @@ export default function MeetScreen() {
       }
     });
   };
+  
+    // Reset position when currentIndex changes
+    useEffect(() => {
+      position.setValue({ x: 0, y: 0 });
+    }, [currentIndex]);
   
   // Format availability days as a readable string
   const formatAvailability = (days: string[] | undefined | null): string => {
