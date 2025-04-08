@@ -8,24 +8,29 @@ import { FIRESTORE_DB } from '@/FirebaseConfig';
 import { useLocalSearchParams } from 'expo-router';
 
 
+
+
 const ChatPage = () => {
   const router = useRouter();
-  //const otherUserId = '06Fr4v5wpbTcGuUVyvm7np0d8Yg1'; // Hardcoded for now -> fuck bogdan
-  const { otherUserId } = useLocalSearchParams(); // this replaces the hardcoded ID
+  //const id = '06Fr4v5wpbTcGuUVyvm7np0d8Yg1'; // Hardcoded for now -> fuck bogdan
+  const { id } = useLocalSearchParams();
+  console.log("uid chat: ", id);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [chatId, setChatId] = useState(null);
   const currentUser = getAuth().currentUser;
+  
+
 
   // Check or create chat
   useEffect(() => {
-    if (!currentUser || !otherUserId) return;
+    if (!currentUser || !id) return;
     checkOrCreateChat();
-  }, [currentUser, otherUserId]);
+  }, [currentUser, id]);
 
   // Listen to real-time messages when chatId is known
   useEffect(() => {
-    
+
     if (!chatId) return;
 
     const messagesRef = collection(FIRESTORE_DB, 'chats', chatId, 'messages');
@@ -54,7 +59,7 @@ const ChatPage = () => {
 
         if (
           userIds.includes(currentUser.uid) &&
-          userIds.includes(otherUserId) &&
+          userIds.includes(id) &&
           userIds.length === 2
         ) {
           console.log('Chat already exists:', chatDoc.id);
@@ -68,7 +73,7 @@ const ChatPage = () => {
       });
 
       await setDoc(doc(FIRESTORE_DB, 'chats', newChatRef.id, 'users', currentUser.uid), { exists: true });
-      await setDoc(doc(FIRESTORE_DB, 'chats', newChatRef.id, 'users', otherUserId), { exists: true });
+      await setDoc(doc(FIRESTORE_DB, 'chats', newChatRef.id, 'users', id), { exists: true });
 
       console.log('Chat created with ID:', newChatRef.id);
       setChatId(newChatRef.id);

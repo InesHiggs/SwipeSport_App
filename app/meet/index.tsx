@@ -207,11 +207,14 @@ export default function MeetScreen() {
       // Move to next card after animation completes
       setCurrentIndex(prevIndex => prevIndex + 1);
       position.setValue({ x: 0, y: 0 });
-      
-      // Handle match logic here (for right swipes)
-      if (direction === 'right1' &&& profiles[currentIndex]) {
-        console.log(`Matched with the right ${profiles[currentIndex + 1].name}`);
-        // Additional match logic could be implemented here
+  
+      if (direction === 'right') {
+        // Match logic here
+        console.log("Matched index (ref):", swipedIndex);
+        console.log("Matched profile (ref):", swipedProfile);
+        console.log("ProfileId:", swipedProfile.uid);
+        
+        router.push(`/chat/${swipedProfile.uid}`);
       }
     });
   };
