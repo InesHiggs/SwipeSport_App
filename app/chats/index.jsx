@@ -6,10 +6,10 @@ import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { useRouter } from 'expo-router';
 
 const ChatsListPage = () => {
+  const router = useRouter();
   const [chats, setChats] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
 
   // Wait for Firebase auth to finish
   useEffect(() => {

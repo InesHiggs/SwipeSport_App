@@ -110,12 +110,16 @@ const ChatPage = () => {
             <Text style={styles.backText}>← Back</Text>
           </TouchableOpacity>
 
-          <FlatList
-            data={messages}
-            keyExtractor={(item) => item.id.toString()}
-            renderItem={({ item }) => <MessageBubble message={item} />}
-            contentContainerStyle={{ paddingBottom: 10 }}
-          />
+          {currentUser && (
+            <FlatList
+              data={messages}
+              keyExtractor={(item) => item.id.toString()}
+              renderItem={({ item }) => (
+                currentUser ? <MessageBubble message={item} currentUserId={currentUser.uid} /> : null
+              )}
+              contentContainerStyle={{ paddingBottom: 10 }}
+            />
+          )}
 
           <View style={styles.inputContainer}>
             <TextInput

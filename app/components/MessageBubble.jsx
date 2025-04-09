@@ -1,8 +1,12 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
-const MessageBubble = ({ message }) => {
-  const isMe = message.sender === 'me';
+const MessageBubble = ({ message, currentUserId }) => {
+  if (!currentUserId) {
+    console.warn("MessageBubble: currentUserId is undefined");
+    return null;
+  }
+  const isMe = message.senderId === currentUserId;
 
   return (
     <View style={[styles.container, isMe ? styles.myMessage : styles.theirMessage]}>
