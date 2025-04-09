@@ -245,7 +245,7 @@ export default function MeetScreen() {
         console.log("Matched profile (ref):", swipedProfile);
         console.log("ProfileId:", swipedProfile.uid);
         
-        router.push(`/chat/${swipedProfile.uid}`);
+        router.push(`/chats/${swipedProfile.uid}`);
       }
     });
   };

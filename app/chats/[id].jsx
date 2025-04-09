@@ -7,9 +7,6 @@ import {collection,getDocs,addDoc,doc,setDoc,query,orderBy,onSnapshot,serverTime
 import { FIRESTORE_DB } from '@/FirebaseConfig';
 import { useLocalSearchParams } from 'expo-router';
 
-
-
-
 const ChatPage = () => {
   const router = useRouter();
   //const id = '06Fr4v5wpbTcGuUVyvm7np0d8Yg1'; // Hardcoded for now -> fuck bogdan
@@ -20,8 +17,6 @@ const ChatPage = () => {
   const [chatId, setChatId] = useState(null);
   const currentUser = getAuth().currentUser;
   
-
-
   // Check or create chat
   useEffect(() => {
     if (!currentUser || !id) return;
@@ -69,7 +64,8 @@ const ChatPage = () => {
       }
 
       const newChatRef = await addDoc(chatsRef, {
-        createdAt: serverTimestamp()
+        createdAt: serverTimestamp(),
+        participants: [currentUser.uid, id], // ✅ Add this!
       });
 
       await setDoc(doc(FIRESTORE_DB, 'chats', newChatRef.id, 'users', currentUser.uid), { exists: true });

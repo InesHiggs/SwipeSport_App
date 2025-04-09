@@ -41,7 +41,7 @@ const HomeScreen = () => {
               textStyle={styles.highlightButtonText} 
             />
             <CustomButton text="Accepted" onPress={() => router.push('/accepted_people')} />
-            <CustomButton text="Chats" onPress={() => router.push('/chat')} />
+            <CustomButton text="Chats" onPress={() => router.push('/chats')} />
             <CustomButton text="Log out" onPress={handleSignOut} />
           </View>
         </View>
