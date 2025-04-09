@@ -46,9 +46,14 @@ const ChatsListPage = () => {
     return () => unsubscribe();
   }, [currentUser]);
   
-  const openChat = (chatId) => {
-    router.push(`/chats/${chatId}`);
+  const openChat = (chatid) => {
+    //router.push(`/chats/${chatid}`);
+    router.push({
+      pathname: `/chats/${chatid}`,
+      params: { type: 'existing' }
+    });
   };
+  
 
   if (loading) {
     return (

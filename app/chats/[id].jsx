@@ -10,7 +10,7 @@ import { useLocalSearchParams } from 'expo-router';
 const ChatPage = () => {
   const router = useRouter();
   //const id = '06Fr4v5wpbTcGuUVyvm7np0d8Yg1'; // Hardcoded for now -> fuck bogdan
-  const { id } = useLocalSearchParams();
+  const { id, type } = useLocalSearchParams();
   console.log("uid chat: ", id);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
@@ -52,11 +52,17 @@ const ChatPage = () => {
         const usersSnapshot = await getDocs(usersRef);
         const userIds = usersSnapshot.docs.map(doc => doc.id);
 
-        if (
+        if(type === 'existing') {
+          console.log('Existing id (opening from chat):', id);
+          setChatId(id);
+          return;
+        }
+        else if (
           userIds.includes(currentUser.uid) &&
           userIds.includes(id) &&
           userIds.length === 2
         ) {
+          console.log('type:', type);
           console.log('Chat already exists:', chatDoc.id);
           setChatId(chatDoc.id);
           return;
