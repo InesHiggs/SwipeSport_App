@@ -8,6 +8,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ImageBackground,
+  ScrollView
 } from "react-native";
 import { Button, Menu, Provider, TextInput } from "react-native-paper";
 import * as ImagePicker from "expo-image-picker";
@@ -155,19 +156,19 @@ const ProfileScreen = () => {
         style={styles.container}
       >
         <Provider>
-          <View style={styles.container}>
-            {/* Profile Picture with Edit Icon */}
-            <View style={styles.profileContainer}>
-              <TouchableOpacity onPress={pickImage} style={styles.profilePicWrapper}>
-                <Image
-                  source={image ? { uri: image } : require("@/assets/images/bgd.png")}
-                  style={styles.profilePic}
-                />
-                <View style={styles.editIcon}>
-                  <MaterialIcons name="edit" size={20} color="white" />
-                </View>
-              </TouchableOpacity>
-            </View>
+          <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
+            <View style={{ flex: 1 }}>
+              <View style={styles.profileContainer}>
+                <TouchableOpacity onPress={pickImage} style={styles.profilePicWrapper}>
+                  <Image
+                    source={image ? { uri: image } : require("@/assets/images/bgd.png")}
+                    style={styles.profilePic}
+                  />
+                  <View style={styles.editIcon}>
+                    <MaterialIcons name="edit" size={20} color="white" />
+                  </View>
+                </TouchableOpacity>
+              </View>
 
             {/* Name Input */}
             <TextInput
@@ -252,6 +253,7 @@ const ProfileScreen = () => {
               Save Changes
             </Button>
           </View>
+          </ScrollView>
         </Provider>
       </ImageBackground>
     </KeyboardAvoidingView>
@@ -264,6 +266,10 @@ const styles = StyleSheet.create({
     padding: 20,
     justifyContent: "center",
   },
+  scrollContainer: {
+  padding: 20,
+  paddingBottom: 100, // Give extra room for the keyboard
+},
   profileContainer: {
     alignItems: "center",
     marginBottom: 20,

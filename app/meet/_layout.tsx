@@ -4,7 +4,7 @@ export default function MeetLayout() {
   return (
     <Stack
       screenOptions={{
-        headerTitle: "Find Partners",
+        headerShown:false,
         headerStyle: {
           backgroundColor: '#863f9c',
         },

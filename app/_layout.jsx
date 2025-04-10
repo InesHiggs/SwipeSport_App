@@ -1,43 +1,46 @@
-import { Stack, useRouter } from "expo-router";
-import {useEffect, useState} from "react";
+import { Stack } from "expo-router";
+import { useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { FIREBASE_AUTH } from "@/FirebaseConfig";
+import { View, ActivityIndicator } from "react-native";
 
-const RootLayout = () => {
-  const router = useRouter();
-  const [user, setUser] = useState(null);
+const AuthenticatedLayout = () => (
+  <Stack>
+    <Stack.Screen name="index" options={{ headerTitle: "Home" }} />
+    <Stack.Screen name="profile" options={{ headerTitle: "Profile" }} />
+    <Stack.Screen name="chats" options={{ headerTitle: "Chats" }} />
+    <Stack.Screen name="match" options={{ headerTitle: "Match" }} />
+    <Stack.Screen name="meet" options={{ headerTitle: "Find Partners" }} />
+    <Stack.Screen name="accepted_people" options={{ headerTitle: "Accepted People" }} />
+    <Stack.Screen name="level_preference" options={{ headerTitle: "Level Preference" }} />
+
+  </Stack>
+);
+
+const UnauthenticatedLayout = () => (
+  <Stack>
+    <Stack.Screen name="auth/login" options={{ headerTitle: "Login" }} />
+    <Stack.Screen name="auth/signup" options={{ headerTitle: "Sign Up" }} />
+  </Stack>
+);
+
+export default function RootLayout() {
+  const [user, setUser] = useState(undefined);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(FIREBASE_AUTH, (user) => {
-      setUser(user);
-      if(!user){
-        router.replace("/auth/login"); //If user not authenticated -> login page
-      } else{
-        router.replace("/"); //Go to home page if auth
-      }
+      setUser(user ?? null);
     });
     return () => unsubscribe();
-    }, []);
+  }, []);
 
+  if (user === undefined) {
     return (
-      <Stack>
-        {user ? (
-          <>
-            <Stack.Screen name="home" options={{ title: "Home" }} />
-            <Stack.Screen name="profile" options={{ headerTitle: "Profile" }} />
-            <Stack.Screen name="chats" options={{ headerTitle: "Chats" }} />
-            <Stack.Screen name="match" options={{ headerTitle: "Match" }} />
-            <Stack.Screen name="meet" options={{ headerTitle: "Find Partners" }} />
-            <Stack.Screen name="accepted_people" options={{ headerTitle: "Accepted" }} />
-          </>
-        ) : (
-          <>
-            <Stack.Screen name="auth/loginin" options={{ headerTitle: "Login" }} />
-            <Stack.Screen name="auth/signupup" options={{ headerTitle: "Sign Up" }} />
-          </>
-        )}
-      </Stack>
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" />
+      </View>
     );
-  };
-  
-  export default RootLayout;
+  }
+
+  return user ? <AuthenticatedLayout /> : <UnauthenticatedLayout />;
+}

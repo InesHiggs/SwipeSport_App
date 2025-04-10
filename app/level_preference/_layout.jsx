@@ -4,7 +4,8 @@ export default function LevelPreferenceLayout() {
   return (
     <Stack
       screenOptions={{
-        headerTitle: "Level Preferences",
+        headerShown:false,
+        
         headerStyle: {
           backgroundColor: '#863f9c',
         },
