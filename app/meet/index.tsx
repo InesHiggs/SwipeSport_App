@@ -10,16 +10,15 @@ import { ActivityIndicator } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 
 
-const router = useRouter();
-const { width, height } = Dimensions.get('window');
-const CARD_WIDTH = width * 0.9;
-const CARD_HEIGHT = height * 0.7;
-const SWIPE_THRESHOLD = 120;
-
 // Default profile image
 const DEFAULT_PROFILE_IMAGE = require('@/assets/images/bgd.png');
 
 export default function MeetScreen() {
+  const router = useRouter();
+  const { width, height } = Dimensions.get('window');
+  const CARD_WIDTH = width * 0.9;
+  const CARD_HEIGHT = height * 0.7;
+  const SWIPE_THRESHOLD = 120;
   const [profiles, setProfiles] = useState<User[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
