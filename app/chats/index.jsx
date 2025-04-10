@@ -17,7 +17,7 @@ const ChatsListPage = () => {
       if (user) {
         setCurrentUser(user);
       } else {
-        console.log("⚠️ No user logged in");
+        console.log("No user logged in");
         setLoading(false);
       }
     });
