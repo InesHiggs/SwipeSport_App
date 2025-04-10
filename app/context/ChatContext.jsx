@@ -10,7 +10,7 @@ export const useChatContext = () => {
 };
 
 // ChatProvider component to wrap your app and provide context
-export const ChatProvider = ({ children }) => {
+const ChatProvider = ({ children }) => {
   const [selectedChatName, setSelectedChatName] = useState('Home'); // Default to "Home"
 
   return (
@@ -19,5 +19,7 @@ export const ChatProvider = ({ children }) => {
     </ChatContext.Provider>
   );
 };
+
+export default ChatProvider;
 
 

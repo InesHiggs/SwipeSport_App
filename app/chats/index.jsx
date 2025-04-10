@@ -1,17 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { View, FlatList, Text, ActivityIndicator, TouchableOpacity, StyleSheet } from 'react-native';
-import { getAuth, onAuthStateChanged } from 'firebase/auth';
-import { FIRESTORE_DB } from '@/FirebaseConfig';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { View, FlatList, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
+import { FIREBASE_AUTH, FIRESTORE_DB } from '@/FirebaseConfig';
+import { collection, query, getDocs, doc, getDoc } from 'firebase/firestore';
+import ChatItem from '../components/ChatItem';
 
-const ChatsListPage = () => {
-  const router = useRouter();
+const ChatsPage = () => {
   const [chats, setChats] = useState([]);
-  const [currentUser, setCurrentUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const router = useRouter();
+  const currentUser = FIREBASE_AUTH.currentUser;
 
-  // Wait for Firebase auth to finish
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(getAuth(), (user) => {
       if (user) {
@@ -23,45 +21,58 @@ const ChatsListPage = () => {
     });
 
     return () => unsubscribe();
+    fetchChats();
   }, []);
 
-  // Fetch chats where user is a participant
-  useEffect(() => {
+  const fetchChats = async () => {
     if (!currentUser) return;
 
-    const chatsRef = collection(FIRESTORE_DB, 'chats');
-    const q = query(chatsRef, where('participants', 'array-contains', currentUser.uid));
+    try {
+      const chatsRef = collection(FIRESTORE_DB, 'chats');
+      const chatsSnapshot = await getDocs(query(chatsRef));
+      
+      const chatPromises = chatsSnapshot.docs.map(async (chatDoc) => {
+        const chatData = chatDoc.data();
+        
+        // Only include chats where the current user is a participant
+        if (!chatData.participants?.includes(currentUser.uid)) {
+          return null;
+        }
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const chatsData = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+        // Get the other participant's ID
+        const otherUserId = chatData.participants.find(id => id !== currentUser.uid);
+        
+        // Get the other user's details
+        const userDoc = await getDoc(doc(FIRESTORE_DB, 'users', otherUserId));
+        const userData = userDoc.data();
 
-      console.log("✅ Chats fetched:", chatsData);
-      setChats(chatsData);
-      setLoading(false);
-    });
+        // Get the last message
+        const messagesRef = collection(FIRESTORE_DB, 'chats', chatDoc.id, 'messages');
+        const messagesSnapshot = await getDocs(query(messagesRef));
+        const messages = messagesSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        
+        const lastMessage = messages.length > 0 
+          ? messages[messages.length - 1].text 
+          : 'No messages yet';
 
-    return () => unsubscribe();
-  }, [currentUser]);
-  
-  const openChat = (chatid) => {
-    //router.push(`/chats/${chatid}`);
-    router.push({
-      pathname: `/chats/${chatid}`,
-      params: { type: 'existing' }
-    });
+        return {
+          id: chatDoc.id,
+          name: userData?.name || 'Unknown User',
+          image: userData?.image || null,
+          lastMessage,
+          timestamp: chatData.createdAt,
+        };
+      });
+
+      const validChats = (await Promise.all(chatPromises)).filter(chat => chat !== null);
+      setChats(validChats);
+    } catch (error) {
+      console.error('Error fetching chats:', error);
+    }
   };
-  
-
-  if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" />
-      </View>
-    );
-  }
 
   return (
     <View style={styles.container}>
@@ -69,17 +80,9 @@ const ChatsListPage = () => {
         data={chats}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <TouchableOpacity onPress={() => openChat(item.id)}>
-            <View style={styles.chatItem}>
-              <Text style={styles.chatText}>Chat ID: {item.id}</Text>
-            </View>
-          </TouchableOpacity>
+          <ChatItem chat={item} />
         )}
-        ListEmptyComponent={() => (
-          <View style={styles.center}>
-            <Text style={styles.emptyText}>No chats available</Text>
-          </View>
-        )}
+        style={styles.list}
       />
     </View>
   );
@@ -88,29 +91,11 @@ const ChatsListPage = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
-    backgroundColor: '#f4f4f4',
-  },
-  center: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  chatItem: {
-    padding: 15,
     backgroundColor: '#fff',
-    borderRadius: 10,
-    marginVertical: 8,
-    elevation: 1,
   },
-  chatText: {
-    fontSize: 16,
-    color: '#333',
-  },
-  emptyText: {
-    color: '#888',
-    fontSize: 16,
+  list: {
+    flex: 1,
   },
 });
 
-export default ChatsListPage;
+export default ChatsPage;

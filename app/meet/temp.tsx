@@ -3,7 +3,7 @@ import type { ComponentProps } from 'react';
 import { 
   View, 
   Text, 
-  Image as RNImage, 
+  Image, 
   StyleSheet, 
   Dimensions, 
   Animated, 
@@ -22,28 +22,14 @@ import type {
   LayoutChangeEvent,
   PanResponderGestureState
 } from 'react-native';
-import type { LinearGradient as ExpoLinearGradient } from 'expo-linear-gradient';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FIREBASE_AUTH, FIRESTORE_DB } from '@/FirebaseConfig';
-import { collection, query, getDocs, doc, getDoc, DocumentData, QueryDocumentSnapshot } from 'firebase/firestore';
+import { collection, query, getDocs, doc, getDoc } from 'firebase/firestore';
 import type { User } from '@/models/user';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
 import { ActivityIndicator } from 'react-native-paper';
 import { router } from 'expo-router';
-
-// Type guard for User data from Firestore
-function isUser(data: DocumentData | undefined): data is User {
-  return (
-    typeof data === 'object' &&
-    data !== null &&
-    'uid' in data &&
-    'name' in data &&
-    'level' in data &&
-    'availability' in data &&
-    'age' in data
-  );
-}
 
 // Default profile image
 const DEFAULT_PROFILE_IMAGE = require('@/assets/images/bgd.png');
@@ -228,10 +214,10 @@ export default function MeetScreen() {
   // Pan responder for swipe gestures
   const panResponder = React.useMemo(() => PanResponder.create({
     onStartShouldSetPanResponder: () => true,
-    onPanResponderMove: (_: any, gesture: PanResponderGestureState) => {
+    onPanResponderMove: (_, gesture: PanResponderGestureState) => {
       position.setValue({ x: gesture.dx, y: gesture.dy });
     },
-    onPanResponderRelease: (_: any, gesture: PanResponderGestureState) => {
+    onPanResponderRelease: (_, gesture: PanResponderGestureState) => {
       if (gesture.dx > 120) {
         swipeCard('right');
       } else if (gesture.dx < -120) {
@@ -277,31 +263,23 @@ export default function MeetScreen() {
         
         if (user) {
           const userDoc = await getDoc(doc(FIRESTORE_DB, 'users', user.uid));
-          const userData = userDoc.data();
-          
-          if (userDoc.exists() && isUser(userData)) {
+          if (userDoc.exists()) {
+            const userData = userDoc.data() as User;
             setCurrentUser(userData);
             
             const usersCollection = collection(FIRESTORE_DB, 'users');
             const usersSnapshot = await getDocs(query(usersCollection));
             
             const potentialMatches = usersSnapshot.docs
-              .map((doc: QueryDocumentSnapshot<DocumentData>) => {
-                const data = doc.data();
-                if (!isUser(data)) return null;
-                return { ...data, id: doc.id } as User;
-              })
-              .filter((match): match is User => {
-                if (!match) return false;
-                return match.uid !== user.uid && 
-                  userData.levelPreference.includes(match.level);
-              })
-              .filter((match): match is User => {
-                return match !== null;
-              })
+              .map(doc => ({ ...(doc.data() as User), id: doc.id }))
+              .filter(potentialMatch => 
+                potentialMatch.uid !== user.uid && 
+                userData.levelPreference.includes(potentialMatch.level)
+              )
               .sort((a, b) => {
-                return daysInCommon(userData.availability, a.availability) - 
-                       daysInCommon(userData.availability, b.availability);
+                const daysInCommonA = daysInCommon(userData.availability, a.availability);
+                const daysInCommonB = daysInCommon(userData.availability, b.availability);
+                return daysInCommonB - daysInCommonA;
               });
             
             setProfiles(potentialMatches);
@@ -363,7 +341,7 @@ export default function MeetScreen() {
             } as ViewStyle,
           ]}
         >
-          <RNImage 
+          <Image 
             source={profiles[currentIndex + 1].image ? 
               { uri: profiles[currentIndex + 1].image } : 
               DEFAULT_PROFILE_IMAGE} 
@@ -403,7 +381,7 @@ export default function MeetScreen() {
           <Text style={styles.badgeText}>NOPE</Text>
         </Animated.View>
 
-        <RNImage 
+        <Image 
           source={profiles[currentIndex].image ? 
             { uri: profiles[currentIndex].image } : 
             DEFAULT_PROFILE_IMAGE} 

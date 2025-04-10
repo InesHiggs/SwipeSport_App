@@ -1,31 +1,27 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard} from 'react-native';
+import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard } from 'react-native';
 import { useRouter } from 'expo-router';
 import MessageBubble from '@/app/components/MessageBubble';
 import { getAuth } from 'firebase/auth';
-import {collection,getDocs,addDoc,doc,setDoc,query,orderBy,onSnapshot,serverTimestamp}from 'firebase/firestore';
+import { collection, getDocs, addDoc, doc, getDoc, setDoc, query, orderBy, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import { FIRESTORE_DB } from '@/FirebaseConfig';
 import { useLocalSearchParams } from 'expo-router';
 
 const ChatPage = () => {
   const router = useRouter();
-  //const id = '06Fr4v5wpbTcGuUVyvm7np0d8Yg1'; // Hardcoded for now -> fuck bogdan
   const { id, type } = useLocalSearchParams();
-  console.log("uid chat: ", id);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [chatId, setChatId] = useState(null);
+  const [otherUserName, setOtherUserName] = useState('');
   const currentUser = getAuth().currentUser;
-  
-  // Check or create chat
+
   useEffect(() => {
     if (!currentUser || !id) return;
     checkOrCreateChat();
   }, [currentUser, id]);
 
-  // Listen to real-time messages when chatId is known
   useEffect(() => {
-
     if (!chatId) return;
 
     const messagesRef = collection(FIRESTORE_DB, 'chats', chatId, 'messages');
@@ -42,45 +38,60 @@ const ChatPage = () => {
     return () => unsubscribe();
   }, [chatId]);
 
+  const fetchOtherUserName = async (userId) => {
+    try {
+      const userDoc = await getDoc(doc(FIRESTORE_DB, 'users', userId));
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        setOtherUserName(userData.name || 'User');
+      }
+    } catch (error) {
+      console.error('Error fetching user name:', error);
+    }
+  };
+
   const checkOrCreateChat = async () => {
     try {
+      if (type === 'existing') {
+        setChatId(id);
+        const chatDoc = await getDoc(doc(FIRESTORE_DB, 'chats', id));
+        if (chatDoc.exists()) {
+          const chatData = chatDoc.data();
+          const otherUserId = chatData.participants.find(pid => pid !== currentUser.uid);
+          if (otherUserId) {
+            await fetchOtherUserName(otherUserId);
+          }
+        }
+        return;
+      }
+
       const chatsRef = collection(FIRESTORE_DB, 'chats');
       const chatsSnapshot = await getDocs(chatsRef);
-
+      
       for (const chatDoc of chatsSnapshot.docs) {
         const usersRef = collection(FIRESTORE_DB, 'chats', chatDoc.id, 'users');
         const usersSnapshot = await getDocs(usersRef);
         const userIds = usersSnapshot.docs.map(doc => doc.id);
 
-        if(type === 'existing') {
-          console.log('Existing id (opening from chat):', id);
-          setChatId(id);
-          return;
-        }
-        else if (
-          userIds.includes(currentUser.uid) &&
-          userIds.includes(id) &&
-          userIds.length === 2
-        ) {
-          console.log('type:', type);
-          console.log('Chat already exists:', chatDoc.id);
+        if (userIds.includes(currentUser.uid) && userIds.includes(id) && userIds.length === 2) {
           setChatId(chatDoc.id);
+          await fetchOtherUserName(id);
           return;
         }
       }
 
       const newChatRef = await addDoc(chatsRef, {
         createdAt: serverTimestamp(),
-        participants: [currentUser.uid, id], // ✅ Add this!
+        participants: [currentUser.uid, id],
       });
 
       await setDoc(doc(FIRESTORE_DB, 'chats', newChatRef.id, 'users', currentUser.uid), { exists: true });
       await setDoc(doc(FIRESTORE_DB, 'chats', newChatRef.id, 'users', id), { exists: true });
 
-      console.log('Chat created with ID:', newChatRef.id);
       setChatId(newChatRef.id);
+      await fetchOtherUserName(id);
     } catch (error) {
-      console.error('Error creating chat:', error);
+      console.error('Error in chat setup:', error);
     }
   };
 
@@ -102,24 +113,26 @@ const ChatPage = () => {
     <KeyboardAvoidingView
       style={{ flex: 1 }}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={130} // adjust based on header height
+      keyboardVerticalOffset={130}
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <View style={styles.container}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <Text style={styles.backText}>← Back</Text>
-          </TouchableOpacity>
+          <View style={styles.header}>
+            <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+              <Text style={styles.backText}>← Back</Text>
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>{otherUserName}</Text>
+            <View style={styles.headerRight} />
+          </View>
 
-          {currentUser && (
-            <FlatList
-              data={messages}
-              keyExtractor={(item) => item.id.toString()}
-              renderItem={({ item }) => (
-                currentUser ? <MessageBubble message={item} currentUserId={currentUser.uid} /> : null
-              )}
-              contentContainerStyle={{ paddingBottom: 10 }}
-            />
-          )}
+          <FlatList
+            data={messages}
+            keyExtractor={(item) => item.id.toString()}
+            renderItem={({ item }) => (
+              currentUser ? <MessageBubble message={item} currentUserId={currentUser.uid} /> : null
+            )}
+            contentContainerStyle={styles.messagesList}
+          />
 
           <View style={styles.inputContainer}>
             <TextInput
@@ -144,39 +157,62 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f4f4f4',
-    padding: 20,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
+    padding: 15,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
   },
   backButton: {
-    marginBottom: 10,
+    width: 60,
   },
   backText: {
     fontSize: 16,
     color: '#007bff',
   },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    flex: 1,
+    textAlign: 'center',
+  },
+  headerRight: {
+    width: 60,
+  },
+  messagesList: {
+    padding: 15,
+  },
   inputContainer: {
     flexDirection: 'row',
-    marginTop: 10,
+    padding: 10,
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
     alignItems: 'center',
-    backgroundColor: 'white',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
   },
   input: {
     flex: 1,
     fontSize: 16,
-    paddingVertical: 5,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: '#f8f8f8',
+    borderRadius: 20,
+    marginRight: 10,
   },
   sendButton: {
     backgroundColor: '#007bff',
-    paddingVertical: 10,
+    paddingVertical: 8,
     paddingHorizontal: 15,
-    borderRadius: 8,
+    borderRadius: 20,
   },
   sendButtonText: {
     color: '#fff',
     fontSize: 16,
+    fontWeight: '500',
   },
 });
 
