@@ -28,7 +28,6 @@ const RootLayout = () => {
             <Stack.Screen name="chats" options={{ headerTitle: "Chats" }} />
             <Stack.Screen name="match" options={{ headerTitle: "Match" }} />
             <Stack.Screen name="meet" options={{ headerTitle: "Find Partners" }} />
-            <Stack.Screen name="accepted_people" options={{ headerTitle: "Accepted" }} />
           </>
         ) : (
           <>

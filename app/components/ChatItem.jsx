@@ -6,7 +6,15 @@ const ChatItem = ({ chat }) => {
   const router = useRouter();
 
   return (
-    <TouchableOpacity style={styles.container} onPress={() => router.push(`/chat/${chat.id}`)}>
+    <TouchableOpacity style={styles.container} onPress={() =>
+      router.push({
+        pathname: `/chats/${chat.id}`,
+        params: {
+          id: chat.id,
+          type: 'existing', 
+        },
+      })
+    }>
       <Image source={{ uri: chat.image }} style={styles.avatar} />
       <View style={styles.textContainer}>
         <Text style={styles.name}>{chat.name}</Text>

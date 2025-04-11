@@ -4,16 +4,21 @@ import { useRouter } from 'expo-router';
 import { FIREBASE_AUTH, FIRESTORE_DB } from '@/FirebaseConfig';
 import { collection, query, getDocs, doc, getDoc } from 'firebase/firestore';
 import ChatItem from '../components/ChatItem';
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
 
 const ChatsPage = () => {
   const [chats, setChats] = useState([]);
   const router = useRouter();
-  const currentUser = FIREBASE_AUTH.currentUser;
+  //const currentUser = FIREBASE_AUTH.currentUser;
+  const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(getAuth(), (user) => {
       if (user) {
+        console.log("Logged in as:", user.uid);
         setCurrentUser(user);
+        fetchChats(user);
+        //fetchChats(user); // pass user directly
       } else {
         console.log("No user logged in");
         setLoading(false);
@@ -21,12 +26,12 @@ const ChatsPage = () => {
     });
 
     return () => unsubscribe();
-    fetchChats();
+    //fetchChats();
   }, []);
 
-  const fetchChats = async () => {
-    if (!currentUser) return;
-
+  const fetchChats = async (user) => {
+    if (!user) return;
+  
     try {
       const chatsRef = collection(FIRESTORE_DB, 'chats');
       const chatsSnapshot = await getDocs(query(chatsRef));
@@ -34,30 +39,23 @@ const ChatsPage = () => {
       const chatPromises = chatsSnapshot.docs.map(async (chatDoc) => {
         const chatData = chatDoc.data();
         
-        // Only include chats where the current user is a participant
-        if (!chatData.participants?.includes(currentUser.uid)) {
-          return null;
-        }
-
-        // Get the other participant's ID
-        const otherUserId = chatData.participants.find(id => id !== currentUser.uid);
-        
-        // Get the other user's details
+        if (!chatData.participants?.includes(user.uid)) return null;
+  
+        const otherUserId = chatData.participants.find(id => id !== user.uid);
         const userDoc = await getDoc(doc(FIRESTORE_DB, 'users', otherUserId));
         const userData = userDoc.data();
-
-        // Get the last message
+  
         const messagesRef = collection(FIRESTORE_DB, 'chats', chatDoc.id, 'messages');
         const messagesSnapshot = await getDocs(query(messagesRef));
         const messages = messagesSnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         }));
-        
+  
         const lastMessage = messages.length > 0 
           ? messages[messages.length - 1].text 
           : 'No messages yet';
-
+  
         return {
           id: chatDoc.id,
           name: userData?.name || 'Unknown User',
@@ -66,14 +64,14 @@ const ChatsPage = () => {
           timestamp: chatData.createdAt,
         };
       });
-
+  
       const validChats = (await Promise.all(chatPromises)).filter(chat => chat !== null);
       setChats(validChats);
     } catch (error) {
       console.error('Error fetching chats:', error);
     }
   };
-
+  
   return (
     <View style={styles.container}>
       <FlatList
