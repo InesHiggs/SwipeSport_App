@@ -1,10 +1,11 @@
 import { useRouter } from "expo-router";
 import { View, TextInput, TouchableOpacity, StyleSheet } from "react-native";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ThemedText } from "../../components/ThemedText";
 import { Colors } from "../../constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native";
+import { useAuth } from "../../context/AuthContext";
 
 const sportsEmojis = [
   "⚽️",
@@ -64,9 +65,17 @@ const validEmailDomains = [
 
 export default function SignUp() {
   const router = useRouter();
+  const { user } = useAuth();
   const [email, setEmail] = useState("");
   const [selectedSport, setSelectedSport] = useState<string>("");
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (user?.email && user?.sport) {
+      setEmail(user.email);
+      setSelectedSport(user.sport);
+    }
+  }, [user]);
 
   const isValidEmail = (email: string): boolean => {
     const domain = email.split("@")[1]?.toLowerCase();

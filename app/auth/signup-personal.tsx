@@ -8,22 +8,33 @@ import {
   TextInput,
   Image,
 } from "react-native";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ThemedText } from "../../components/ThemedText";
 import { Colors } from "../../constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import { Picker } from "@react-native-picker/picker";
+import { useAuth } from "../../context/AuthContext";
 
 const genderOptions = ["Male", "Female", "Other", "Prefer not to say"];
 
 export default function SignUpPersonal() {
   const router = useRouter();
   const params = useLocalSearchParams();
+  const { user } = useAuth();
   const [photo, setPhoto] = useState<string | null>(null);
   const [dateOfBirth, setDateOfBirth] = useState<Date | null>(null);
   const [dateInput, setDateInput] = useState("");
   const [gender, setGender] = useState<string>("");
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (user?.dateOfBirth) {
+      setDateOfBirth(new Date(user.dateOfBirth));
+      setGender(user.gender || "");
+      setPhoto(user.photo || null);
+    }
+  }, [user]);
 
   const handleBack = () => {
     router.back();
@@ -34,7 +45,20 @@ export default function SignUpPersonal() {
       setError("Please fill in all required fields");
       return;
     }
-    // Handle next screen navigation here
+
+    router.push({
+      pathname: "/auth/signup-preference",
+      params: {
+        name: params.name,
+        email: params.email,
+        sport: params.sport,
+        sportName: params.sportName,
+        proficiency: params.proficiency,
+        photo,
+        dateOfBirth: dateOfBirth.toISOString(),
+        gender,
+      },
+    });
   };
 
   const handleAddPhoto = async () => {
@@ -192,27 +216,33 @@ export default function SignUpPersonal() {
           <ThemedText style={styles.fieldTitle}>
             What is your gender?
           </ThemedText>
-          <View style={styles.genderContainer}>
-            {genderOptions.map((option) => (
-              <TouchableOpacity
-                key={option}
-                style={[
-                  styles.genderButton,
-                  gender === option && styles.selectedGender,
-                ]}
-                onPress={() => setGender(option)}
-              >
-                <ThemedText
-                  style={[
-                    styles.genderText,
-                    gender === option && styles.selectedGenderText,
-                  ]}
-                >
-                  {option}
-                </ThemedText>
-              </TouchableOpacity>
-            ))}
-          </View>
+          <TouchableOpacity
+            style={[
+              styles.selectInput,
+              Platform.OS === "ios" && styles.selectInputIOS,
+            ]}
+          >
+            <Picker
+              selectedValue={gender}
+              onValueChange={(itemValue) => setGender(itemValue)}
+              style={styles.picker}
+              mode="dropdown"
+            >
+              <Picker.Item
+                label="Select gender"
+                value=""
+                color={Colors.light.placeholder}
+              />
+              {genderOptions.map((option) => (
+                <Picker.Item
+                  key={option}
+                  label={option}
+                  value={option}
+                  color={Colors.light.text}
+                />
+              ))}
+            </Picker>
+          </TouchableOpacity>
         </View>
 
         {error ? (
@@ -292,30 +322,22 @@ const styles = StyleSheet.create({
     color: Colors.light.text,
     letterSpacing: 1, // Add slight spacing for better readability
   },
-  genderContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  genderButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+  selectInput: {
+    height: 50,
     borderWidth: 1,
+    borderRadius: 8,
     borderColor: "#E2E8F0",
-    marginRight: 8,
-    marginBottom: 8,
+    backgroundColor: "#fff",
+    justifyContent: "center",
   },
-  selectedGender: {
-    borderColor: Colors.light.primary,
-    borderWidth: 2,
+  selectInputIOS: {
+    paddingHorizontal: 16,
   },
-  genderText: {
-    fontSize: 16,
+  picker: {
+    height: 50,
+    marginLeft: Platform.OS === "android" ? 16 : 0,
+    marginRight: Platform.OS === "android" ? 16 : 0,
     color: Colors.light.text,
-  },
-  selectedGenderText: {
-    fontWeight: "500",
   },
   errorText: {
     color: "#EF4444",
