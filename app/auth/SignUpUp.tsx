@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
 import { View, TextInput, TouchableOpacity, StyleSheet } from "react-native";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { ThemedText } from "../../components/ThemedText";
 import { Colors } from "../../constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
@@ -25,12 +25,10 @@ const sportsEmojis = [
   "🏋️‍♂️",
 ];
 
-// Add this type definition above the sportsMapping object
 type SportsMap = {
   [key: string]: string;
 };
 
-// Update the sportsMapping declaration with the type
 const sportsMapping: SportsMap = {
   "⚽️": "Football",
   "🏀": "Basketball",
@@ -50,7 +48,6 @@ const sportsMapping: SportsMap = {
   "🏋️‍♂️": "Weight Lifting",
 };
 
-// Add this array of valid email domains at the top of the file with other constants
 const validEmailDomains = [
   "gmail.com",
   "yahoo.com",
@@ -64,17 +61,9 @@ const validEmailDomains = [
 
 export default function SignUp() {
   const router = useRouter();
-  const { user } = useAuth();
   const [email, setEmail] = useState("");
   const [selectedSport, setSelectedSport] = useState<string>("");
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    if (user?.email && user?.sport) {
-      setEmail(user.email);
-      setSelectedSport(user.sport);
-    }
-  }, [user]);
 
   const isValidEmail = (email: string): boolean => {
     const domain = email.split("@")[1]?.toLowerCase();
@@ -87,14 +76,12 @@ export default function SignUp() {
       return;
     }
 
-    // Check if email format is valid
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       setError("Please enter a valid email address");
       return;
     }
 
-    // Check if email domain is valid
     if (!isValidEmail(email)) {
       setError(
         "Please use a valid email provider (e.g., Gmail, Yahoo, Outlook)"
@@ -114,7 +101,7 @@ export default function SignUp() {
 
   const handleSportSelection = (emoji: string) => {
     setSelectedSport(emoji);
-    setError(""); // Clear error when sport is selected
+    setError("");
   };
 
   const handleBack = () => {
@@ -123,13 +110,11 @@ export default function SignUp() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Back Button */}
       <TouchableOpacity style={styles.backButton} onPress={handleBack}>
         <Ionicons name="arrow-back" size={24} color={Colors.light.text} />
       </TouchableOpacity>
 
       <View style={[styles.content, { paddingTop: 64 }]}>
-        {/* SwipeSport Title */}
         <View style={styles.brandContainer}>
           <ThemedText style={styles.brandName}>SwipeSport</ThemedText>
           <ThemedText style={styles.brandTagline}>
@@ -137,7 +122,6 @@ export default function SignUp() {
           </ThemedText>
         </View>
 
-        {/* Sport Selection Text */}
         <View style={styles.sportSelectionContainer}>
           <ThemedText style={styles.sportSelectionText}>
             {selectedSport
@@ -146,7 +130,6 @@ export default function SignUp() {
           </ThemedText>
         </View>
 
-        {/* Sports Emoji Grid */}
         <View style={styles.emojiGrid}>
           {sportsEmojis.map((emoji, index) => (
             <TouchableOpacity
@@ -166,7 +149,6 @@ export default function SignUp() {
           ))}
         </View>
 
-        {/* Welcome Section */}
         <View style={styles.welcomeContainer}>
           <ThemedText style={styles.title}>Welcome!</ThemedText>
           <ThemedText style={styles.subtitle}>
@@ -174,7 +156,6 @@ export default function SignUp() {
           </ThemedText>
         </View>
 
-        {/* Email Input */}
         <TextInput
           value={email}
           style={[styles.input, error ? styles.inputError : null]}
@@ -192,7 +173,6 @@ export default function SignUp() {
           <ThemedText style={styles.errorText}>{error}</ThemedText>
         ) : null}
 
-        {/* Next Button */}
         <TouchableOpacity
           style={[
             styles.button,
@@ -221,7 +201,7 @@ const styles = StyleSheet.create({
   brandContainer: {
     alignItems: "center",
     marginBottom: 24,
-    marginTop: 24, // Add top margin
+    marginTop: 24,
   },
   brandName: {
     textAlign: "center",
@@ -229,13 +209,13 @@ const styles = StyleSheet.create({
     fontSize: 48,
     fontFamily: "PlayfairDisplay-Medium",
     fontWeight: "500",
-    marginBottom: 16, // Add bottom margin to create space
+    marginBottom: 16,
   },
   brandTagline: {
     fontSize: 20,
     color: Colors.light.textSecondary,
     marginTop: 8,
-    lineHeight: 32, // Add line height to prevent text overlap
+    lineHeight: 32,
   },
   sportSelectionContainer: {
     alignItems: "center",
@@ -250,11 +230,11 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     justifyContent: "center",
     marginVertical: 24,
-    width: "60%", // Reduced from 80% to 60%
+    width: "60%",
     alignSelf: "center",
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
-    padding: 12, // Reduced padding to make grid more compact
+    padding: 12,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
@@ -269,17 +249,17 @@ const styles = StyleSheet.create({
     aspectRatio: 1,
     justifyContent: "center",
     alignItems: "center",
-    padding: 4, // Reduced padding to bring emojis closer
+    padding: 4,
   },
   emoji: {
-    fontSize: 32, // Increased from 28 to 32 for bigger emojis
+    fontSize: 32,
   },
   selectedEmoji: {
     transform: [{ scale: 1.2 }],
     textShadowColor: Colors.light.primary,
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 10,
-    backgroundColor: "rgba(167, 223, 48, 0.1)", // Light green background
+    backgroundColor: "rgba(167, 223, 48, 0.1)",
     borderRadius: 8,
   },
   welcomeContainer: {

@@ -8,33 +8,29 @@ import {
   TextInput,
   Image,
 } from "react-native";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { ThemedText } from "../../components/ThemedText";
 import { Colors } from "../../constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { Picker } from "@react-native-picker/picker";
-import { useAuth } from "../../context/AuthContext";
 
-const genderOptions = ["Male", "Female", "Other", "Prefer not to say"];
+const genderOptions = [
+  "Male",
+  "Female",
+  "Non-binary",
+  "Other",
+  "Prefer not to say",
+];
 
 export default function SignUpPersonal() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const { user } = useAuth();
   const [photo, setPhoto] = useState<string | null>(null);
   const [dateOfBirth, setDateOfBirth] = useState<Date | null>(null);
   const [dateInput, setDateInput] = useState("");
   const [gender, setGender] = useState<string>("");
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    if (user?.dateOfBirth) {
-      setDateOfBirth(new Date(user.dateOfBirth));
-      setGender(user.gender || "");
-      setPhoto(user.photo || null);
-    }
-  }, [user]);
 
   const handleBack = () => {
     router.back();
@@ -216,21 +212,18 @@ export default function SignUpPersonal() {
           <ThemedText style={styles.fieldTitle}>
             What is your gender?
           </ThemedText>
-          <TouchableOpacity
-            style={[
-              styles.selectInput,
-              Platform.OS === "ios" && styles.selectInputIOS,
-            ]}
-          >
+          <View style={styles.pickerContainer}>
             <Picker
               selectedValue={gender}
               onValueChange={(itemValue) => setGender(itemValue)}
               style={styles.picker}
               mode="dropdown"
+              dropdownIconColor={Colors.light.text}
             >
               <Picker.Item
                 label="Select gender"
                 value=""
+                style={styles.placeholderItem}
                 color={Colors.light.placeholder}
               />
               {genderOptions.map((option) => (
@@ -238,11 +231,12 @@ export default function SignUpPersonal() {
                   key={option}
                   label={option}
                   value={option}
+                  style={styles.pickerItem}
                   color={Colors.light.text}
                 />
               ))}
             </Picker>
-          </TouchableOpacity>
+          </View>
         </View>
 
         {error ? (
@@ -322,22 +316,31 @@ const styles = StyleSheet.create({
     color: Colors.light.text,
     letterSpacing: 1, // Add slight spacing for better readability
   },
-  selectInput: {
+  pickerContainer: {
     height: 50,
     borderWidth: 1,
     borderRadius: 8,
     borderColor: "#E2E8F0",
     backgroundColor: "#fff",
     justifyContent: "center",
-  },
-  selectInputIOS: {
-    paddingHorizontal: 16,
+    overflow: "hidden",
+    marginTop: 8,
   },
   picker: {
     height: 50,
-    marginLeft: Platform.OS === "android" ? 16 : 0,
-    marginRight: Platform.OS === "android" ? 16 : 0,
+    width: "100%",
     color: Colors.light.text,
+    backgroundColor: "transparent",
+    marginLeft: Platform.OS === "android" ? -8 : 0,
+    marginRight: Platform.OS === "android" ? -8 : 0,
+  },
+  pickerItem: {
+    fontSize: 16,
+    color: Colors.light.text,
+  },
+  placeholderItem: {
+    fontSize: 16,
+    color: Colors.light.placeholder,
   },
   errorText: {
     color: "#EF4444",

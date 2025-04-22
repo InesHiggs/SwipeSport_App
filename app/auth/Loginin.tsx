@@ -17,29 +17,15 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const auth = FIREBASE_AUTH;
   const router = useRouter();
+  const auth = FIREBASE_AUTH;
 
   const signIn = async () => {
-    // Input validation
-    if (!email || !password) {
-      alert("Please enter both email and password");
-      return;
-    }
-
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      alert("Please enter a valid university email address");
-      return;
-    }
-
-    setLoading(true);
     try {
+      setLoading(true);
       await signInWithEmailAndPassword(auth, email, password);
       router.replace("/");
-    } catch (error: any) {
-      console.log(error);
+    } catch (error) {
       alert("Sign in failed: " + error.message);
     } finally {
       setLoading(false);

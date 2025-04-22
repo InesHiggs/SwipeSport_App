@@ -4,7 +4,6 @@ import { onAuthStateChanged } from "firebase/auth";
 import { FIREBASE_AUTH } from "@/FirebaseConfig";
 import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
-import { AuthProvider } from "../context/AuthContext";
 import { View, ActivityIndicator } from "react-native";
 import Colors from "../constants/Colors";
 
@@ -43,32 +42,8 @@ export default function RootLayout() {
   }
 
   return (
-    <AuthProvider>
-      <Stack onLayout={onLayoutRootView}>
-        {user ? (
-          <>
-            <Stack.Screen name="home" options={{ title: "Home" }} />
-            <Stack.Screen name="profile" options={{ headerTitle: "Profile" }} />
-            <Stack.Screen name="chats" options={{ headerTitle: "Chats" }} />
-            <Stack.Screen name="match" options={{ headerTitle: "Match" }} />
-            <Stack.Screen
-              name="meet"
-              options={{ headerTitle: "Find Partners" }}
-            />
-          </>
-        ) : (
-          <>
-            <Stack.Screen
-              name="auth/loginin"
-              options={{ headerTitle: "Login" }}
-            />
-            <Stack.Screen
-              name="auth/signupup"
-              options={{ headerTitle: "Sign Up" }}
-            />
-          </>
-        )}
-      </Stack>
-    </AuthProvider>
+    <Stack onLayout={onLayoutRootView}>
+      {/* ...existing stack screens... */}
+    </Stack>
   );
 }

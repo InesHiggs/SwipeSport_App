@@ -10,7 +10,7 @@ import { useState } from "react";
 import { ThemedText } from "../../components/ThemedText";
 import { Colors } from "../../constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
-import { useAuth } from "../../context/AuthContext";
+import { FIREBASE_AUTH } from "@/FirebaseConfig";
 
 const playerLevels = [
   {
@@ -43,8 +43,7 @@ const playerLevels = [
 export default function SignUpPreference() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const { setUser } = useAuth();
-  const [selectedLevel, setSelectedLevel] = useState<string>("");
+  const [selectedLevel, setSelectedLevel] = useState("");
   const [error, setError] = useState("");
 
   const handleBack = () => {
@@ -57,31 +56,12 @@ export default function SignUpPreference() {
       return;
     }
 
-    const userData = {
-      uid: Array.isArray(params.uid) ? params.uid[0] : params.uid || "",
-      email: Array.isArray(params.email) ? params.email[0] : params.email || "",
-      name: Array.isArray(params.name) ? params.name[0] : params.name || "",
-      sport: Array.isArray(params.sport) ? params.sport[0] : params.sport || "",
-      sportName: Array.isArray(params.sportName)
-        ? params.sportName[0]
-        : params.sportName || "",
-      proficiency: Array.isArray(params.proficiency)
-        ? params.proficiency[0]
-        : params.proficiency || "",
-      photo: Array.isArray(params.photo)
-        ? params.photo[0]
-        : params.photo || null,
-      dateOfBirth: Array.isArray(params.dateOfBirth)
-        ? params.dateOfBirth[0]
-        : params.dateOfBirth || "",
-      gender: Array.isArray(params.gender)
-        ? params.gender[0]
-        : params.gender || "",
-      preferredLevel: selectedLevel,
-    };
-
-    await setUser(userData);
-    router.replace("/");
+    try {
+      // Your Firebase logic here
+      router.replace("/");
+    } catch (error) {
+      setError("An error occurred");
+    }
   };
 
   return (
