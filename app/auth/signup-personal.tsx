@@ -1,0 +1,374 @@
+import { useRouter, useLocalSearchParams } from "expo-router";
+import {
+  View,
+  TouchableOpacity,
+  StyleSheet,
+  SafeAreaView,
+  Platform,
+  TextInput,
+  Image,
+} from "react-native";
+import { useState, useEffect } from "react";
+import { ThemedText } from "../../components/ThemedText";
+import { Colors } from "../../constants/Colors";
+import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
+import { Picker } from "@react-native-picker/picker";
+import { useAuth } from "../../context/AuthContext";
+
+const genderOptions = ["Male", "Female", "Other", "Prefer not to say"];
+
+export default function SignUpPersonal() {
+  const router = useRouter();
+  const params = useLocalSearchParams();
+  const { user } = useAuth();
+  const [photo, setPhoto] = useState<string | null>(null);
+  const [dateOfBirth, setDateOfBirth] = useState<Date | null>(null);
+  const [dateInput, setDateInput] = useState("");
+  const [gender, setGender] = useState<string>("");
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (user?.dateOfBirth) {
+      setDateOfBirth(new Date(user.dateOfBirth));
+      setGender(user.gender || "");
+      setPhoto(user.photo || null);
+    }
+  }, [user]);
+
+  const handleBack = () => {
+    router.back();
+  };
+
+  const handleNext = () => {
+    if (!dateOfBirth || !gender) {
+      setError("Please fill in all required fields");
+      return;
+    }
+
+    router.push({
+      pathname: "/auth/signup-preference",
+      params: {
+        name: params.name,
+        email: params.email,
+        sport: params.sport,
+        sportName: params.sportName,
+        proficiency: params.proficiency,
+        photo,
+        dateOfBirth: dateOfBirth.toISOString(),
+        gender,
+      },
+    });
+  };
+
+  const handleAddPhoto = async () => {
+    // Request permission
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (status !== "granted") {
+      setError("Permission to access gallery was denied");
+      return;
+    }
+
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.5,
+      });
+
+      if (!result.canceled && result.assets[0].uri) {
+        setPhoto(result.assets[0].uri);
+        setError("");
+      }
+    } catch (error) {
+      setError("Error picking image");
+    }
+  };
+
+  const formatDateInput = (input: string) => {
+    // Remove any non-numeric characters
+    const numbers = input.replace(/\D/g, "");
+
+    // Add slashes after MM and DD
+    if (numbers.length <= 2) return numbers;
+    if (numbers.length <= 4)
+      return `${numbers.slice(0, 2)}/${numbers.slice(2)}`;
+    return `${numbers.slice(0, 2)}/${numbers.slice(2, 4)}/${numbers.slice(
+      4,
+      8
+    )}`;
+  };
+
+  const handleDateChange = (text: string) => {
+    const numbers = text.replace(/[^\d]/g, "");
+
+    if (numbers.length <= 8) {
+      const formatted = formatDateInput(numbers);
+      setDateInput(formatted);
+
+      if (numbers.length === 8) {
+        const month = Number(numbers.slice(0, 2));
+        const day = Number(numbers.slice(2, 4));
+        const year = Number(numbers.slice(4, 8));
+
+        // Validate month
+        if (month < 1 || month > 12) {
+          setError("Please enter a valid month (01-12)");
+          setDateOfBirth(null);
+          return;
+        }
+
+        // Validate day
+        const daysInMonth = new Date(year, month, 0).getDate();
+        if (day < 1 || day > daysInMonth) {
+          setError(`Please enter a valid day (1-${daysInMonth})`);
+          setDateOfBirth(null);
+          return;
+        }
+
+        // Validate year (must be at least 13 years old and not in the future)
+        const today = new Date();
+        const minDate = new Date();
+        minDate.setFullYear(today.getFullYear() - 100); // Max age 100 years
+        const maxDate = new Date();
+        maxDate.setFullYear(today.getFullYear() - 13); // Min age 13 years
+
+        const inputDate = new Date(year, month - 1, day);
+
+        if (inputDate > today) {
+          setError("Date cannot be in the future");
+          setDateOfBirth(null);
+          return;
+        }
+
+        if (inputDate > maxDate) {
+          setError("You must be at least 13 years old");
+          setDateOfBirth(null);
+          return;
+        }
+
+        if (inputDate < minDate) {
+          setError("Please enter a valid date");
+          setDateOfBirth(null);
+          return;
+        }
+
+        // If all validations pass
+        setDateOfBirth(inputDate);
+        setError("");
+      } else {
+        setDateOfBirth(null);
+        setError("");
+      }
+    }
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      {/* Back Button */}
+      <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+        <Ionicons name="arrow-back" size={24} color={Colors.light.text} />
+      </TouchableOpacity>
+
+      <View style={styles.content}>
+        {/* Photo Upload */}
+        <View style={styles.photoContainer}>
+          <TouchableOpacity
+            style={[
+              styles.addPhotoButton,
+              photo ? styles.photoButtonWithImage : null,
+            ]}
+            onPress={handleAddPhoto}
+          >
+            {photo ? (
+              <Image
+                source={{ uri: photo }}
+                style={styles.photoPreview}
+                resizeMode="cover"
+              />
+            ) : (
+              <Ionicons name="add" size={40} color={Colors.light.primary} />
+            )}
+          </TouchableOpacity>
+          <ThemedText style={styles.addPhotoText}>
+            {photo ? "Change photo" : "Add photo"}
+          </ThemedText>
+        </View>
+
+        {/* Date of Birth */}
+        <View style={styles.fieldContainer}>
+          <ThemedText style={styles.fieldTitle}>When were you born?</ThemedText>
+          <TextInput
+            style={styles.dateInput}
+            value={dateInput}
+            onChangeText={handleDateChange}
+            placeholder="MM/DD/YYYY"
+            placeholderTextColor={Colors.light.placeholder}
+            keyboardType="numeric"
+            maxLength={10}
+          />
+        </View>
+
+        {/* Gender Selection */}
+        <View style={styles.fieldContainer}>
+          <ThemedText style={styles.fieldTitle}>
+            What is your gender?
+          </ThemedText>
+          <TouchableOpacity
+            style={[
+              styles.selectInput,
+              Platform.OS === "ios" && styles.selectInputIOS,
+            ]}
+          >
+            <Picker
+              selectedValue={gender}
+              onValueChange={(itemValue) => setGender(itemValue)}
+              style={styles.picker}
+              mode="dropdown"
+            >
+              <Picker.Item
+                label="Select gender"
+                value=""
+                color={Colors.light.placeholder}
+              />
+              {genderOptions.map((option) => (
+                <Picker.Item
+                  key={option}
+                  label={option}
+                  value={option}
+                  color={Colors.light.text}
+                />
+              ))}
+            </Picker>
+          </TouchableOpacity>
+        </View>
+
+        {error ? (
+          <ThemedText style={styles.errorText}>{error}</ThemedText>
+        ) : null}
+      </View>
+
+      {/* Next Button */}
+      <TouchableOpacity
+        style={[
+          styles.nextButton,
+          (!dateOfBirth || !gender) && styles.buttonDisabled,
+        ]}
+        onPress={handleNext}
+        disabled={!dateOfBirth || !gender}
+      >
+        <ThemedText style={styles.buttonText}>Next</ThemedText>
+      </TouchableOpacity>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#fff",
+  },
+  content: {
+    flex: 1,
+    padding: 24,
+    paddingTop: 64,
+  },
+  photoContainer: {
+    alignItems: "center",
+    marginBottom: 32,
+  },
+  addPhotoButton: {
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    backgroundColor: "#F3F4F6",
+    borderWidth: 2,
+    borderColor: Colors.light.primary,
+    borderStyle: "dashed",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  photoButtonWithImage: {
+    borderStyle: "solid",
+  },
+  photoPreview: {
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+  },
+  addPhotoText: {
+    color: Colors.light.textSecondary,
+    fontSize: 16,
+  },
+  fieldContainer: {
+    marginBottom: 24,
+  },
+  fieldTitle: {
+    fontSize: 16,
+    color: Colors.light.text,
+    marginBottom: 12,
+    fontWeight: "500",
+  },
+  dateInput: {
+    height: 50,
+    borderWidth: 1,
+    borderRadius: 8,
+    borderColor: "#E2E8F0",
+    padding: 16,
+    fontSize: 16,
+    color: Colors.light.text,
+    letterSpacing: 1, // Add slight spacing for better readability
+  },
+  selectInput: {
+    height: 50,
+    borderWidth: 1,
+    borderRadius: 8,
+    borderColor: "#E2E8F0",
+    backgroundColor: "#fff",
+    justifyContent: "center",
+  },
+  selectInputIOS: {
+    paddingHorizontal: 16,
+  },
+  picker: {
+    height: 50,
+    marginLeft: Platform.OS === "android" ? 16 : 0,
+    marginRight: Platform.OS === "android" ? 16 : 0,
+    color: Colors.light.text,
+  },
+  errorText: {
+    color: "#EF4444",
+    fontSize: 14,
+    marginTop: 8,
+    textAlign: "center",
+  },
+  backButton: {
+    position: "absolute",
+    top: 16,
+    left: 16,
+    zIndex: 1,
+    padding: 8,
+  },
+  nextButton: {
+    position: "absolute",
+    bottom: Platform.OS === "ios" ? 34 : 24,
+    right: 24,
+    height: 50,
+    width: 100,
+    backgroundColor: Colors.light.primary,
+    borderRadius: 8,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  buttonText: {
+    color: "#000000",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  buttonDisabled: {
+    opacity: 0.5,
+  },
+});
