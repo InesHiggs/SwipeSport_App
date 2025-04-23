@@ -62,41 +62,58 @@ const validEmailDomains = [
 export default function SignUp() {
   const router = useRouter();
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [selectedSport, setSelectedSport] = useState<string>("");
   const [error, setError] = useState("");
+  const [emailError, setEmailError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
 
   const isValidEmail = (email: string): boolean => {
     const domain = email.split("@")[1]?.toLowerCase();
     return domain ? validEmailDomains.includes(domain) : false;
   };
 
+  const isValidPassword = (password: string): boolean => {
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+    return passwordRegex.test(password);
+  };
+
   const handleNext = () => {
-    if (!email || !selectedSport) {
-      setError("Please select a sport and enter your email address");
+    let hasError = false;
+    setEmailError("");
+    setPasswordError("");
+    setError("");
+
+    if (!email || !selectedSport || !password) {
+      setError("Please fill in all fields");
       return;
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      setError("Please enter a valid email address");
-      return;
+    if (!emailRegex.test(email) || !isValidEmail(email)) {
+      setEmailError("Please enter a valid email address");
+      hasError = true;
     }
 
-    if (!isValidEmail(email)) {
-      setError(
-        "Please use a valid email provider (e.g., Gmail, Yahoo, Outlook)"
+    if (!isValidPassword(password)) {
+      setPasswordError(
+        "Password must have 8+ chars, 1 uppercase, 1 lowercase, 1 number"
       );
-      return;
+      hasError = true;
     }
 
-    router.push({
-      pathname: "/auth/signup-details",
-      params: {
-        email,
-        sport: selectedSport,
-        sportName: sportsMapping[selectedSport],
-      },
-    });
+    if (!hasError) {
+      router.push({
+        pathname: "/auth/signup-details",
+        params: {
+          email,
+          password,
+          sport: selectedSport,
+          sportName: sportsMapping[selectedSport],
+        },
+      });
+    }
   };
 
   const handleSportSelection = (emoji: string) => {
@@ -158,28 +175,60 @@ export default function SignUp() {
 
         <TextInput
           value={email}
-          style={[styles.input, error ? styles.inputError : null]}
+          style={[styles.input, emailError ? styles.inputError : null]}
           placeholder="University email"
           placeholderTextColor={Colors.light.placeholder}
           autoCapitalize="none"
           keyboardType="email-address"
           onChangeText={(text) => {
             setEmail(text);
+            setEmailError("");
             setError("");
           }}
         />
 
-        {error ? (
-          <ThemedText style={styles.errorText}>{error}</ThemedText>
-        ) : null}
+        <View style={styles.passwordContainer}>
+          <TextInput
+            value={password}
+            style={[
+              styles.input,
+              passwordError ? styles.inputError : null,
+              { flex: 1, marginBottom: 0 },
+            ]}
+            placeholder="Password"
+            placeholderTextColor={Colors.light.placeholder}
+            secureTextEntry={!showPassword}
+            onChangeText={(text) => {
+              setPassword(text);
+              setPasswordError("");
+              setError("");
+            }}
+          />
+          <TouchableOpacity
+            style={styles.eyeIcon}
+            onPress={() => setShowPassword(!showPassword)}
+          >
+            <Ionicons
+              name={showPassword ? "eye-off" : "eye"}
+              size={24}
+              color={Colors.light.text}
+            />
+          </TouchableOpacity>
+        </View>
+
+        {(emailError || passwordError || error) && (
+          <ThemedText style={styles.errorText}>
+            {error || emailError || passwordError}
+          </ThemedText>
+        )}
 
         <TouchableOpacity
           style={[
             styles.button,
-            (!email || !selectedSport) && styles.buttonDisabled,
+            (!email || !selectedSport || !password) && styles.buttonDisabled,
           ]}
           onPress={handleNext}
-          disabled={!email || !selectedSport}
+          disabled={!email || !selectedSport || !password}
         >
           <ThemedText style={styles.buttonText}>Next</ThemedText>
         </TouchableOpacity>
@@ -297,6 +346,7 @@ const styles = StyleSheet.create({
     marginTop: -16,
     marginBottom: 16,
     textAlign: "center",
+    paddingHorizontal: 20,
   },
   button: {
     height: 50,
@@ -320,5 +370,17 @@ const styles = StyleSheet.create({
     left: 16,
     zIndex: 1,
     padding: 8,
+  },
+  passwordContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 24,
+    position: "relative",
+  },
+  eyeIcon: {
+    position: "absolute",
+    right: 16,
+    height: 50,
+    justifyContent: "center",
   },
 });
