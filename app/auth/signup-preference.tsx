@@ -10,7 +10,9 @@ import { useState } from "react";
 import { ThemedText } from "../../components/ThemedText";
 import { Colors } from "../../constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
-import { FIREBASE_AUTH } from "@/FirebaseConfig";
+import { FIREBASE_AUTH, FIREBASE_DB } from "@/FirebaseConfig";
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { doc, setDoc } from "firebase/firestore";
 
 const playerLevels = [
   {
@@ -56,11 +58,68 @@ export default function SignUpPreference() {
       return;
     }
 
+    console.log("signup-preference received params:", params); // Debug log
+
+    const {
+      email,
+      password,
+      name,
+      dateOfBirth,
+      gender,
+      photo,
+      sport,
+      sportName,
+    } = params;
+
+    console.log("Extracted credentials:", {
+      email: String(email),
+      password: String(password),
+      hasEmail: !!email,
+      hasPassword: !!password,
+    }); // Debug log
+
+    // Validate required authentication fields
+    if (!email || !password) {
+      setError("Email and password are required");
+      console.error("Missing credentials:", {
+        email: !!email,
+        password: !!password,
+      });
+      return;
+    }
+
     try {
-      // Your Firebase logic here
+      // Create user authentication with explicit type casting
+      const userCredential = await createUserWithEmailAndPassword(
+        FIREBASE_AUTH,
+        String(email),
+        String(password)
+      );
+
+      // Create user profile document
+      await setDoc(doc(FIREBASE_DB, "users", userCredential.user.uid), {
+        email: String(email),
+        name: String(name),
+        dateOfBirth: dateOfBirth ? String(dateOfBirth) : null,
+        gender: gender ? String(gender) : null,
+        photo: photo ? String(photo) : null,
+        sport: sport ? String(sport) : null,
+        sportName: sportName ? String(sportName) : null,
+        proficiencyLevel: selectedLevel,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        uid: userCredential.user.uid,
+      });
+
+      // Navigate to home screen
       router.replace("/");
-    } catch (error) {
-      setError("An error occurred");
+    } catch (error: any) {
+      console.error("Signup error:", error);
+      setError(
+        error.code === "auth/missing-password"
+          ? "Please enter a valid password"
+          : error.message ?? "Failed to complete signup"
+      );
     }
   };
 

@@ -37,13 +37,18 @@ export default function SignUpDetails() {
       return;
     }
 
+    console.log("signup-details received params:", params); // Debug log
+    console.log("signup-details sending params:", {
+      ...params,
+      name,
+      proficiency,
+    }); // Debug log
+
     router.push({
       pathname: "/auth/signup-personal",
       params: {
+        ...params, // Include ALL previous params
         name,
-        email: params.email,
-        sport: params.sport,
-        sportName: params.sportName,
         proficiency,
       },
     });

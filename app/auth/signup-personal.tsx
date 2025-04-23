@@ -42,44 +42,50 @@ export default function SignUpPersonal() {
       return;
     }
 
+    console.log("signup-personal received params:", params); // Debug log
+    console.log("signup-personal sending params:", {
+      ...params,
+      dateOfBirth,
+      gender,
+      photo,
+    }); // Debug log
+
     router.push({
       pathname: "/auth/signup-preference",
       params: {
-        name: params.name,
-        email: params.email,
-        sport: params.sport,
-        sportName: params.sportName,
-        proficiency: params.proficiency,
-        photo,
-        dateOfBirth: dateOfBirth.toISOString(),
+        ...params, // Include ALL previous params
+        dateOfBirth,
         gender,
+        photo,
       },
     });
   };
 
   const handleAddPhoto = async () => {
-    // Request permission
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-    if (status !== "granted") {
-      setError("Permission to access gallery was denied");
-      return;
-    }
-
     try {
+      const { status } =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+      if (status !== "granted") {
+        setError("Permission to access gallery was denied");
+        return;
+      }
+
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 0.5,
+        quality: 0.8,
+        base64: true,
       });
 
-      if (!result.canceled && result.assets[0].uri) {
+      if (!result.canceled && result.assets?.[0]) {
         setPhoto(result.assets[0].uri);
         setError("");
       }
     } catch (error) {
-      setError("Error picking image");
+      console.error("Error picking image:", error);
+      setError("Error selecting image");
     }
   };
 
@@ -185,12 +191,23 @@ export default function SignUpPersonal() {
                 resizeMode="cover"
               />
             ) : (
-              <Ionicons name="add" size={40} color={Colors.light.primary} />
+              <>
+                <Ionicons
+                  name="camera-outline"
+                  size={40}
+                  color={Colors.light.primary}
+                />
+                <ThemedText style={styles.addPhotoText}>Add photo</ThemedText>
+              </>
             )}
           </TouchableOpacity>
-          <ThemedText style={styles.addPhotoText}>
-            {photo ? "Change photo" : "Add photo"}
-          </ThemedText>
+          {photo && (
+            <TouchableOpacity onPress={handleAddPhoto}>
+              <ThemedText style={styles.changePhotoText}>
+                Change photo
+              </ThemedText>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Date of Birth */}
@@ -284,18 +301,26 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 8,
+    overflow: "hidden", // This ensures the image stays within the circular boundary
   },
   photoButtonWithImage: {
     borderStyle: "solid",
+    borderColor: Colors.light.primary,
   },
   photoPreview: {
-    width: 150,
-    height: 150,
+    width: "100%",
+    height: "100%",
     borderRadius: 75,
   },
   addPhotoText: {
     color: Colors.light.textSecondary,
+    fontSize: 14,
+    marginTop: 8,
+  },
+  changePhotoText: {
+    color: Colors.light.primary,
     fontSize: 16,
+    marginTop: 8,
   },
   fieldContainer: {
     marginBottom: 24,

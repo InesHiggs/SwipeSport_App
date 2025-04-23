@@ -104,11 +104,13 @@ export default function SignUp() {
     }
 
     if (!hasError) {
+      console.log("SignUpUp params:", { email, password }); // Debug log
+
       router.push({
         pathname: "/auth/signup-details",
         params: {
           email,
-          password,
+          password, // Make sure password is included
           sport: selectedSport,
           sportName: sportsMapping[selectedSport],
         },
