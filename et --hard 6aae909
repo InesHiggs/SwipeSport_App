@@ -1,0 +1,34 @@
+[33m6aae909[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mrd2p[m[33m)[m swipe done
+[33md0af5ac[m[33m ([m[1;31morigin/rd2p[m[33m, [m[1;31morigin/rd2[m[33m, [m[1;32mrd2[m[33m)[m swipe done
+[33m41e2dde[m all good till now
+[33m098319d[m mostly done
+[33m3c766f9[m qw
+[33m42d97ba[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmain[m[33m)[m Fixed bugs
+[33m5f1a4df[m Merge branch 'main' of https://github.com/InesHiggs/SwipeSport_App
+[33md202d91[m index
+[33mf44893c[m added names in Chat
+[33m3918b1e[m fixed Hook warning
+[33mdead008[m quicksave-2025-04-10_16-49-05
+[33mc98f06f[m Fixed the message layout
+[33m264c569[m fixed ines code
+[33m5b5e74a[m From Swipe to messages
+[33md44487d[m crazy fix
+[33m8d5768d[m Merge branch 'main' of https://github.com/InesHiggs/SwipeSport_App
+[33m92e019b[m commit
+[33mb2d7df8[m linking now to correct chat
+[33m01690b8[m match opens (wrong) chat window now
+[33m19f87a0[m working Find Partner
+[33mb3919c7[m added new UI for Day Selection
+[33m48f8389[m added UI Button
+[33m5b1b285[m added meet page
+[33m01fa740[m Merge branch 'main' of https://github.com/InesHiggs/SwipeSport_App
+[33mb5b4c4f[m storing messages
+[33mfb4a27c[m buttons adjusted, u need to do that: npx expo install expo-linear-gradient
+[33mb88c3c8[m keyboard dynamics
+[33mf4e4572[m dynamic keyboard adjustment
+[33mfb79e51[m Updating user info
+[33md2b5f54[m[33m ([m[1;31morigin/trying_connect_front-backend[m[33m)[m fixed auth routing
+[33md3e9b76[m still fixing the path after the login
+[33md1f52e3[m Stored Sign Up data
+[33m7b30299[m Sign Up page
+[33m415c421[m Initial commit - Added project files
