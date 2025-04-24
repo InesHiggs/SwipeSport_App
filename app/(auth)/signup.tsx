@@ -1,10 +1,15 @@
 import { useRouter } from "expo-router";
-import { View, TextInput, TouchableOpacity, StyleSheet } from "react-native";
+import {
+  View,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  SafeAreaView,
+} from "react-native";
 import { useState } from "react";
 import { ThemedText } from "../../components/ThemedText";
 import { Colors } from "../../constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
-import { SafeAreaView } from "react-native";
 
 const sportsEmojis = [
   "⚽️",

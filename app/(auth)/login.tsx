@@ -26,7 +26,11 @@ const Login = () => {
       await signInWithEmailAndPassword(auth, email, password);
       router.replace("/");
     } catch (error) {
-      alert("Sign in failed: " + error.message);
+      if (error instanceof Error) {
+        alert("Sign in failed: " + error.message);
+      } else {
+        alert("Sign in failed: An unknown error occurred.");
+      }
     } finally {
       setLoading(false);
     }
@@ -86,7 +90,7 @@ const Login = () => {
         </View>
 
         <View style={styles.signupContainer}>
-          <TouchableOpacity onPress={() => router.push("/auth/SignUpUp")}>
+          <TouchableOpacity onPress={() => router.push("/(auth)/signup")}>
             <ThemedText style={styles.signupText}>
               No account?{" "}
               <ThemedText style={styles.signupLink}>Sign up</ThemedText>
