@@ -45,16 +45,16 @@ export default function SignUpPersonal() {
     console.log("signup-personal received params:", params); // Debug log
     console.log("signup-personal sending params:", {
       ...params,
-      dateOfBirth,
+      dateOfBirth: dateOfBirth?.toISOString(),
       gender,
       photo,
     }); // Debug log
 
     router.push({
-      pathname: "/auth/signup-preference",
+      pathname: "/(auth)/signup-preference",
       params: {
         ...params, // Include ALL previous params
-        dateOfBirth,
+        dateOfBirth: dateOfBirth?.toISOString(),
         gender,
         photo,
       },
@@ -103,6 +103,52 @@ export default function SignUpPersonal() {
     )}`;
   };
 
+  const validateMonth = (month: number): boolean => {
+    if (month < 1 || month > 12) {
+      setError("Please enter a valid month (01-12)");
+      setDateOfBirth(null);
+      return false;
+    }
+    return true;
+  };
+
+  const validateDay = (day: number, daysInMonth: number): boolean => {
+    if (day < 1 || day > daysInMonth) {
+      setError(`Please enter a valid day (1-${daysInMonth})`);
+      setDateOfBirth(null);
+      return false;
+    }
+    return true;
+  };
+
+  const validateYear = (inputDate: Date): boolean => {
+    const today = new Date();
+    const minDate = new Date();
+    minDate.setFullYear(today.getFullYear() - 100); // Max age 100 years
+    const maxDate = new Date();
+    maxDate.setFullYear(today.getFullYear() - 13); // Min age 13 years
+
+    if (inputDate > today) {
+      setError("Date cannot be in the future");
+      setDateOfBirth(null);
+      return false;
+    }
+
+    if (inputDate > maxDate) {
+      setError("You must be at least 13 years old");
+      setDateOfBirth(null);
+      return false;
+    }
+
+    if (inputDate < minDate) {
+      setError("Please enter a valid date");
+      setDateOfBirth(null);
+      return false;
+    }
+
+    return true;
+  };
+
   const handleDateChange = (text: string) => {
     const numbers = text.replace(/[^\d]/g, "");
 
@@ -115,47 +161,13 @@ export default function SignUpPersonal() {
         const day = Number(numbers.slice(2, 4));
         const year = Number(numbers.slice(4, 8));
 
-        // Validate month
-        if (month < 1 || month > 12) {
-          setError("Please enter a valid month (01-12)");
-          setDateOfBirth(null);
-          return;
-        }
+        if (!validateMonth(month)) return;
 
-        // Validate day
         const daysInMonth = new Date(year, month, 0).getDate();
-        if (day < 1 || day > daysInMonth) {
-          setError(`Please enter a valid day (1-${daysInMonth})`);
-          setDateOfBirth(null);
-          return;
-        }
-
-        // Validate year (must be at least 13 years old and not in the future)
-        const today = new Date();
-        const minDate = new Date();
-        minDate.setFullYear(today.getFullYear() - 100); // Max age 100 years
-        const maxDate = new Date();
-        maxDate.setFullYear(today.getFullYear() - 13); // Min age 13 years
+        if (!validateDay(day, daysInMonth)) return;
 
         const inputDate = new Date(year, month - 1, day);
-
-        if (inputDate > today) {
-          setError("Date cannot be in the future");
-          setDateOfBirth(null);
-          return;
-        }
-
-        if (inputDate > maxDate) {
-          setError("You must be at least 13 years old");
-          setDateOfBirth(null);
-          return;
-        }
-
-        if (inputDate < minDate) {
-          setError("Please enter a valid date");
-          setDateOfBirth(null);
-          return;
-        }
+        if (!validateYear(inputDate)) return;
 
         // If all validations pass
         setDateOfBirth(inputDate);

@@ -112,7 +112,7 @@ export default function SignUp() {
       console.log("SignUpUp params:", { email, password }); // Debug log
 
       router.push({
-        pathname: "/auth/signup-details",
+        pathname: "/(auth)/signup-details",
         params: {
           email,
           password, // Make sure password is included
@@ -157,7 +157,7 @@ export default function SignUp() {
         <View style={styles.emojiGrid}>
           {sportsEmojis.map((emoji, index) => (
             <TouchableOpacity
-              key={index}
+              key={emoji}
               style={styles.emojiContainer}
               onPress={() => handleSportSelection(emoji)}
             >
@@ -223,7 +223,7 @@ export default function SignUp() {
           </TouchableOpacity>
         </View>
 
-        {(emailError || passwordError || error) && (
+        {!!(emailError || passwordError || error) && (
           <ThemedText style={styles.errorText}>
             {error || emailError || passwordError}
           </ThemedText>

@@ -89,20 +89,28 @@ export default function LikesScreen() {
       </View>
 
       <View style={styles.content}>
-        {loading ? (
-          <ActivityIndicator size="large" color={Colors.light.primary} />
-        ) : likes.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No likes yet</Text>
-          </View>
-        ) : (
-          <FlatList
-            data={likes}
-            renderItem={renderLikeItem}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.likesList}
-          />
-        )}
+        {(() => {
+          if (loading) {
+            return (
+              <ActivityIndicator size="large" color={Colors.light.primary} />
+            );
+          } else if (likes.length === 0) {
+            return (
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>No likes yet</Text>
+              </View>
+            );
+          } else {
+            return (
+              <FlatList
+                data={likes}
+                renderItem={renderLikeItem}
+                keyExtractor={(item) => item.id}
+                contentContainerStyle={styles.likesList}
+              />
+            );
+          }
+        })()}
       </View>
     </View>
   );
