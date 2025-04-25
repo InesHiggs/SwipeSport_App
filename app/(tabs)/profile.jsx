@@ -12,7 +12,7 @@ import {
   Alert,
   ActivityIndicator,
 } from "react-native";
-import { Button, Provider, TextInput } from "react-native-paper";
+import { Button, Provider } from "react-native-paper";
 import * as ImagePicker from "expo-image-picker";
 import { FIREBASE_AUTH, FIREBASE_DB } from "@/FirebaseConfig";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
@@ -22,18 +22,148 @@ import { onAuthStateChanged } from "firebase/auth";
 import { Colors } from "../../constants/Colors";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
+// Firebase profile image helper component built directly into this file
+const FirebaseProfileImage = ({ userId, style, defaultImage }) => {
+  const [imageUrl, setImageUrl] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [loadAttempts, setLoadAttempts] = useState(0);
+  const [debugMessage, setDebugMessage] = useState(
+    "Initializing image fetch..."
+  );
+
+  useEffect(() => {
+    const fetchFreshImageUrl = async () => {
+      if (!userId) {
+        console.log("No userId provided for image fetch");
+        setDebugMessage("No userId provided");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        console.log(
+          `Attempting to fetch image for userId: ${userId} (attempt ${
+            loadAttempts + 1
+          })`
+        );
+        setDebugMessage(`Fetching image (attempt ${loadAttempts + 1})...`);
+        setLoading(true);
+
+        const storage = getStorage();
+        const imageRef = ref(storage, `profile_images/${userId}`);
+
+        // Try to get the download URL (this may throw if not found or due to network issues)
+        const url = await getDownloadURL(imageRef);
+        console.log("✅ Success! Firebase image URL fetched:", url);
+        setImageUrl(url);
+        setDebugMessage("Image successfully fetched!");
+        setError(false);
+      } catch (err) {
+        if (err.code === "storage/object-not-found") {
+          console.log(
+            "❌ Image not found in Firebase Storage - no profile picture has been uploaded yet"
+          );
+          setDebugMessage("No profile picture has been uploaded yet.");
+        } else if (err.code === "storage/retry-limit-exceeded") {
+          console.error(
+            "❌ Firebase image fetch error:",
+            err.code,
+            err.message
+          );
+          setDebugMessage(
+            "Retry limit exceeded. Something is taking too long or your network may be slow."
+          );
+        } else {
+          console.error(
+            "❌ Firebase image fetch error:",
+            err.code,
+            err.message
+          );
+          setDebugMessage(`Error: ${err.code} - ${err.message}`);
+        }
+        setError(true);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFreshImageUrl();
+  }, [userId, loadAttempts]);
+
+  // Display a loading spinner with the debug message while loading
+  if (loading) {
+    return (
+      <View style={[{ justifyContent: "center", alignItems: "center" }, style]}>
+        <ActivityIndicator size="large" color={Colors.light.primary} />
+        <Text style={{ fontSize: 10, marginTop: 5, color: "#666" }}>
+          {debugMessage}
+        </Text>
+      </View>
+    );
+  }
+
+  // If error or no URL available, show default image with a retry overlay that displays the debug message
+  if (error || !imageUrl) {
+    return (
+      <TouchableOpacity
+        style={[{ justifyContent: "center", alignItems: "center" }, style]}
+        onPress={() => setLoadAttempts((prev) => prev + 1)}
+      >
+        <Image source={defaultImage} style={style} resizeMode="cover" />
+        <View
+          style={{
+            position: "absolute",
+            bottom: 0,
+            backgroundColor: "rgba(0,0,0,0.6)",
+            width: "100%",
+            padding: 3,
+          }}
+        >
+          <Text style={{ color: "#fff", fontSize: 10, textAlign: "center" }}>
+            {debugMessage} {"\n"}Tap to retry
+          </Text>
+        </View>
+      </TouchableOpacity>
+    );
+  }
+
+  // Lastly, if we have a valid URL, render the image with onLoad and onError logging
+  return (
+    <Image
+      source={{ uri: imageUrl }}
+      style={style}
+      resizeMode="cover"
+      onLoadStart={() => {
+        console.log("Image loading started:", imageUrl);
+        setDebugMessage("Image loading started...");
+      }}
+      onLoad={() => {
+        console.log("Image loaded successfully");
+        setDebugMessage("Image loaded successfully");
+      }}
+      onError={(e) => {
+        console.log("Image load error:", e.nativeEvent.error);
+        setDebugMessage(`Image load error: ${e.nativeEvent.error}`);
+        setError(true);
+      }}
+    />
+  );
+};
+
 const ProfileScreen = () => {
   const [name, setName] = useState("");
-  const [gender, setGender] = useState("Select Gender");
+  const [gender, setGender] = useState("");
   const [age, setAge] = useState("");
   const [sports, setSports] = useState([]);
-  const [proficiencyLevel, setProficiencyLevel] = useState("Select Level");
+  const [proficiencyLevel, setProficiencyLevel] = useState("");
   const [availability, setAvailability] = useState([]);
   const [image, setImage] = useState(null);
   const [userId, setUserId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [isLocalImage, setIsLocalImage] = useState(false);
 
   const router = useRouter();
 
@@ -65,14 +195,12 @@ const ProfileScreen = () => {
 
         if (docSnap.exists()) {
           const userData = docSnap.data();
-          console.log("COMPLETE USER DATA:", JSON.stringify(userData, null, 2));
 
-          // Try both field names (for backward compatibility)
+          // Try both field names for availability
           const availabilityData =
             userData.userAvailability || userData.availability || [];
-          console.log("Availability data:", availabilityData);
 
-          // Make sure these field names match exactly with your signup form
+          // Set user data
           setName(userData.name || "");
 
           // Calculate age from dateOfBirth if available
@@ -91,25 +219,24 @@ const ProfileScreen = () => {
           }
 
           setGender(userData.gender || "");
-
           setSports(userData.sportName ? [userData.sportName] : []);
-
           setProficiencyLevel(userData.proficiencyLevel || "");
-
           setAvailability(
             Array.isArray(availabilityData) ? availabilityData : []
           );
 
-          console.log(
-            "Image URL from database:",
-            userData.photo || userData.photoURL || "No image URL found"
-          );
-
+          // For image handling, just note if we have a Firebase image
+          // We'll load it using the FirebaseProfileImage component
           const imageUrl = userData.photo || userData.photoURL;
-          if (imageUrl) {
-            console.log("Setting image with URL:", imageUrl);
+          if (imageUrl && !imageUrl.startsWith("file://")) {
+            // This indicates we have an image in Firebase, but we'll load it fresh
+            setIsLocalImage(false);
+          } else if (imageUrl && imageUrl.startsWith("file://")) {
+            // This is a local image that hasn't been uploaded yet
+            setIsLocalImage(true);
             setImage(imageUrl);
           } else {
+            setIsLocalImage(false);
             setImage(null);
           }
         } else {
@@ -145,11 +272,8 @@ const ProfileScreen = () => {
     if (!result.canceled) {
       console.log("Selected image URI:", result.assets[0].uri);
       setImage(result.assets[0].uri);
+      setIsLocalImage(true);
       setHasUnsavedChanges(true);
-      Alert.alert(
-        "Image Selected",
-        "Don't forget to save changes to update your profile picture!"
-      );
     }
   };
 
@@ -168,21 +292,25 @@ const ProfileScreen = () => {
         try {
           console.log("Uploading image to Firebase Storage");
           const storage = getStorage();
-          // Create a unique file path to avoid caching issues
-          const imageRef = ref(
-            storage,
-            `profile_pictures/${userId}_${Date.now()}`
-          );
+          const imageRef = ref(storage, `profile_images/${userId}`);
 
           const response = await fetch(image);
           const blob = await response.blob();
 
-          // Upload the image
-          await uploadBytes(imageRef, blob);
+          // Upload the image with metadata that prevents caching
+          await uploadBytes(imageRef, blob, {
+            contentType: "image/jpeg",
+            customMetadata: {
+              "Cache-Control": "no-cache, no-store, must-revalidate",
+            },
+          });
 
           // Get download URL
           newImageUrl = await getDownloadURL(imageRef);
           console.log("Upload successful, new image URL:", newImageUrl);
+
+          // After successful upload, we're no longer using a local image
+          setIsLocalImage(false);
         } catch (error) {
           console.error("Error uploading image:", error);
           Alert.alert("Error", "Failed to upload profile picture");
@@ -203,20 +331,9 @@ const ProfileScreen = () => {
       if (newImageUrl) {
         updates.photo = newImageUrl;
         updates.photoURL = newImageUrl;
-        // Update local state with the new URL
-        setImage(newImageUrl);
       }
 
       await updateDoc(userRef, updates);
-
-      // Verify the data was saved
-      const verifyDoc = await getDoc(userRef);
-      if (verifyDoc.exists()) {
-        console.log(
-          "Verified data:",
-          JSON.stringify(verifyDoc.data(), null, 2)
-        );
-      }
 
       Alert.alert("Success", "Profile updated successfully!");
       setHasUnsavedChanges(false);
@@ -234,7 +351,6 @@ const ProfileScreen = () => {
         ? prevAvailability.filter((d) => d !== day)
         : [...prevAvailability, day];
 
-      // Set the unsaved changes flag when a day is toggled
       setHasUnsavedChanges(true);
       return newAvailability;
     });
@@ -256,7 +372,6 @@ const ProfileScreen = () => {
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           style={styles.container}
         >
-          {/* Add header with logout button */}
           <View style={styles.header}>
             <Text style={styles.headerTitle}>Profile</Text>
             <TouchableOpacity
@@ -273,31 +388,77 @@ const ProfileScreen = () => {
           </View>
 
           <ScrollView contentContainerStyle={styles.scrollContent}>
-            {/* Profile Picture Section */}
             <View style={styles.profileContainer}>
               <TouchableOpacity
                 onPress={pickImage}
                 style={styles.profilePicWrapper}
               >
-                {loading && image && image.startsWith("file://") ? (
+                {loading && isLocalImage ? (
                   <ActivityIndicator
                     size="large"
                     color={Colors.light.primary}
                   />
-                ) : (
+                ) : isLocalImage ? (
+                  // This branch is for a newly selected local image.
                   <Image
-                    key={image || "default"} // Key to force re-render
-                    source={
-                      image
-                        ? { uri: image }
-                        : require("../../assets/images/default-avatar.png")
-                    }
+                    source={{ uri: image }}
                     style={styles.profilePic}
                     resizeMode="cover"
                   />
+                ) : (
+                  // This branch uses the FirebaseProfileImage to fetch the remote image.
+                  <FirebaseProfileImage
+                    userId={userId}
+                    style={styles.profilePic}
+                    defaultImage={require("../../assets/images/default-avatar.png")}
+                  />
                 )}
               </TouchableOpacity>
+              <TouchableOpacity
+                style={{
+                  backgroundColor: "#f0f0f0",
+                  padding: 10,
+                  alignItems: "center",
+                  marginVertical: 10,
+                  borderRadius: 5,
+                }}
+                onPress={async () => {
+                  try {
+                    const storage = getStorage();
+                    const imageRef = ref(storage, `profile_images/${userId}`);
 
+                    // Check if image exists
+                    try {
+                      const url = await getDownloadURL(imageRef);
+                      Alert.alert(
+                        "Profile Image Status",
+                        `Image exists at path: profile_images/${userId}\n\nURL: ${url.substring(
+                          0,
+                          50
+                        )}...`
+                      );
+                    } catch (err) {
+                      if (err.code === "storage/object-not-found") {
+                        Alert.alert(
+                          "Profile Image Status",
+                          "No image found at this path. You need to upload a profile picture first."
+                        );
+                      } else {
+                        Alert.alert(
+                          "Error",
+                          `Failed to check image: ${err.message}`
+                        );
+                      }
+                    }
+                  } catch (e) {
+                    console.error(e);
+                  }
+                }}
+              >
+                <Text style={{ color: Colors.light.textSecondary }}>
+                  Debug: Check Image Status
+                </Text>
+              </TouchableOpacity>
               <TouchableOpacity
                 style={styles.editIconContainer}
                 onPress={pickImage}
@@ -306,11 +467,10 @@ const ProfileScreen = () => {
               </TouchableOpacity>
             </View>
 
-            {/* User Details Section */}
+            {/* Rest of profile UI */}
             <View style={styles.detailsSection}>
               <Text style={styles.sectionTitle}>Personal Information</Text>
 
-              {/* Name field */}
               <View style={styles.inputContainer}>
                 <Text style={styles.label}>Name</Text>
                 <View style={styles.displayField}>
@@ -320,7 +480,6 @@ const ProfileScreen = () => {
                 </View>
               </View>
 
-              {/* Age field */}
               <View style={styles.inputContainer}>
                 <Text style={styles.label}>Age</Text>
                 <View style={styles.displayField}>
@@ -330,7 +489,6 @@ const ProfileScreen = () => {
                 </View>
               </View>
 
-              {/* Gender field */}
               <View style={styles.inputContainer}>
                 <Text style={styles.label}>Gender</Text>
                 <View style={styles.displayField}>
@@ -355,7 +513,6 @@ const ProfileScreen = () => {
                 </View>
               </View>
 
-              {/* Proficiency Level field */}
               <View style={styles.inputContainer}>
                 <Text style={styles.label}>Proficiency Level</Text>
                 <View style={styles.displayField}>
@@ -366,7 +523,6 @@ const ProfileScreen = () => {
               </View>
             </View>
 
-            {/* Availability Section */}
             <View style={styles.cardSection}>
               <Text style={styles.sectionTitle}>Availability</Text>
               <Text style={styles.subtitle}>
@@ -425,12 +581,12 @@ const ProfileScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
-    justifyContent: "center",
+    backgroundColor: "#fff",
   },
   loadingContainer: {
     alignItems: "center",
     justifyContent: "center",
+    padding: 20,
   },
   loadingText: {
     marginTop: 10,
@@ -443,7 +599,7 @@ const styles = StyleSheet.create({
   },
   profileContainer: {
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: 30,
     position: "relative",
   },
   profilePicWrapper: {
@@ -453,7 +609,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#f0f0f0",
     borderWidth: 2,
     borderColor: Colors.light.primary,
-    overflow: "hidden", // Critical for the circular crop
+    overflow: "hidden",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -464,13 +620,12 @@ const styles = StyleSheet.create({
   editIconContainer: {
     position: "absolute",
     bottom: 0,
-    right: "35%",
+    right: "50%",
+    marginRight: -100,
     backgroundColor: Colors.light.primary,
     padding: 8,
     borderRadius: 20,
     zIndex: 10,
-    marginRight: "5%",
-    marginBottom: "0%",
   },
   sectionTitle: {
     fontSize: 20,
@@ -484,10 +639,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
     elevation: 3,
@@ -498,10 +650,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
     elevation: 3,
@@ -588,6 +737,7 @@ const styles = StyleSheet.create({
   saveButton: {
     marginTop: 20,
     backgroundColor: Colors.light.primary,
+    marginBottom: 20,
   },
   disabledButton: {
     backgroundColor: "#c4a8ff",

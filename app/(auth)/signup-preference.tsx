@@ -45,7 +45,7 @@ const playerLevels = [
 export default function SignUpPreference() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const [selectedLevel, setSelectedLevel] = useState("");
+  const [selectedLevel, setselectedLevel] = useState<string[]>([]);
   const [error, setError] = useState("");
 
   const handleBack = () => {
@@ -53,7 +53,7 @@ export default function SignUpPreference() {
   };
 
   const handleComplete = async () => {
-    if (!selectedLevel) {
+    if (selectedLevel.length === 0) {
       setError("Please select your preferred player level");
       return;
     }
@@ -106,6 +106,7 @@ export default function SignUpPreference() {
         sport: sport ? String(sport) : null,
         sportName: sportName ? String(sportName) : null,
         proficiencyLevel: selectedLevel,
+        levelPreference: [selectedLevel], // Add this line to save preferences
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         uid: userCredential.user.uid,
@@ -141,9 +142,15 @@ export default function SignUpPreference() {
               key={level}
               style={[
                 styles.levelButton,
-                selectedLevel === level && styles.selectedLevel,
+                selectedLevel.includes(level) && styles.selectedLevel,
               ]}
-              onPress={() => setSelectedLevel(level)}
+              onPress={() =>
+                setselectedLevel((prev) =>
+                  prev.includes(level)
+                    ? prev.filter((l) => l !== level)
+                    : [...prev, level]
+                )
+              }
             >
               <Ionicons
                 name={icon as any}
@@ -153,7 +160,7 @@ export default function SignUpPreference() {
               <ThemedText
                 style={[
                   styles.levelText,
-                  selectedLevel === level && styles.selectedLevelText,
+                  selectedLevel.includes(level) && styles.selectedLevelText,
                 ]}
               >
                 {level}
@@ -170,7 +177,7 @@ export default function SignUpPreference() {
       <TouchableOpacity
         style={[styles.completeButton, !selectedLevel && styles.buttonDisabled]}
         onPress={handleComplete}
-        disabled={!selectedLevel}
+        disabled={selectedLevel.length === 0}
       >
         <ThemedText style={styles.buttonText}>Complete</ThemedText>
       </TouchableOpacity>

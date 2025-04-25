@@ -14,7 +14,28 @@ import { Colors } from "@/constants/Colors";
 import Swiper from "react-native-deck-swiper";
 import { LinearGradient } from "expo-linear-gradient";
 import { FIREBASE_AUTH, FIREBASE_DB } from "@/FirebaseConfig";
-import { collection, query, getDocs, doc, getDoc } from "firebase/firestore";
+import {
+  collection,
+  query,
+  getDocs,
+  doc,
+  getDoc,
+  updateDoc,
+} from "firebase/firestore";
+
+async function updateExistingUsers() {
+  const usersCollection = collection(FIREBASE_DB, "users");
+  const usersSnapshot = await getDocs(usersCollection);
+
+  usersSnapshot.forEach(async (userDoc) => {
+    const userData = userDoc.data();
+    if (userData.proficiencyLevel && !userData.levelPreference) {
+      await updateDoc(doc(FIREBASE_DB, "users", userDoc.id), {
+        levelPreference: [userData.proficiencyLevel],
+      });
+    }
+  });
+}
 
 // Type guard for user data
 function isUser(data) {
@@ -45,6 +66,7 @@ export default function HomeScreen() {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        await updateExistingUsers();
         const user = FIREBASE_AUTH.currentUser;
 
         if (user) {
