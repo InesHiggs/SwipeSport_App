@@ -45,7 +45,7 @@ export default function SignUpDetails() {
     }); // Debug log
 
     router.push({
-      pathname: "/auth/signup-personal",
+      pathname: "/(auth)/signup-personal",
       params: {
         ...params, // Include ALL previous params
         name,

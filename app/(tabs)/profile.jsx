@@ -14,7 +14,7 @@ import {
 } from "react-native";
 import { Button, Provider, TextInput } from "react-native-paper";
 import * as ImagePicker from "expo-image-picker";
-import { FIREBASE_AUTH, FIRESTORE_DB } from "@/FirebaseConfig";
+import { FIREBASE_AUTH, FIREBASE_DB } from "@/FirebaseConfig";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { useRouter } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -33,6 +33,7 @@ const ProfileScreen = () => {
   const [userId, setUserId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const router = useRouter();
 
@@ -59,27 +60,58 @@ const ProfileScreen = () => {
     const fetchUserData = async (user) => {
       try {
         setIsInitialLoading(true);
-        const userRef = doc(FIRESTORE_DB, "users", user.uid);
+        const userRef = doc(FIREBASE_DB, "users", user.uid);
         const docSnap = await getDoc(userRef);
 
         if (docSnap.exists()) {
           const userData = docSnap.data();
-          console.log("Fetched user data:", userData); // Debug log
+          console.log("COMPLETE USER DATA:", JSON.stringify(userData, null, 2));
+
+          // Try both field names (for backward compatibility)
+          const availabilityData =
+            userData.userAvailability || userData.availability || [];
+          console.log("Availability data:", availabilityData);
 
           // Make sure these field names match exactly with your signup form
-          setName(userData.fullName || ""); // Changed from name to fullName if that's what you used
-          setAge(userData.age ? userData.age.toString() : "");
+          setName(userData.name || "");
+
+          // Calculate age from dateOfBirth if available
+          if (userData.dateOfBirth) {
+            const birthDate = new Date(userData.dateOfBirth);
+            const today = new Date();
+            let age = today.getFullYear() - birthDate.getFullYear();
+            if (
+              today.getMonth() < birthDate.getMonth() ||
+              (today.getMonth() === birthDate.getMonth() &&
+                today.getDate() < birthDate.getDate())
+            ) {
+              age--;
+            }
+            setAge(age.toString());
+          }
+
           setGender(userData.gender || "");
-          setSports(
-            Array.isArray(userData.sportsInterests)
-              ? userData.sportsInterests
-              : []
-          ); // Changed from sports to sportsInterests if that's what you used
-          setProficiencyLevel(userData.skillLevel || ""); // Changed from proficiencyLevel to skillLevel if that's what you used
+
+          setSports(userData.sportName ? [userData.sportName] : []);
+
+          setProficiencyLevel(userData.proficiencyLevel || "");
+
           setAvailability(
-            Array.isArray(userData.availability) ? userData.availability : []
+            Array.isArray(availabilityData) ? availabilityData : []
           );
-          setImage(userData.photoURL || null);
+
+          console.log(
+            "Image URL from database:",
+            userData.photo || userData.photoURL || "No image URL found"
+          );
+
+          const imageUrl = userData.photo || userData.photoURL;
+          if (imageUrl) {
+            console.log("Setting image with URL:", imageUrl);
+            setImage(imageUrl);
+          } else {
+            setImage(null);
+          }
         } else {
           console.log("No user data found");
           Alert.alert("Error", "No user data found");
@@ -107,11 +139,17 @@ const ProfileScreen = () => {
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [1, 1],
-      quality: 1,
+      quality: 0.8,
     });
 
     if (!result.canceled) {
+      console.log("Selected image URI:", result.assets[0].uri);
       setImage(result.assets[0].uri);
+      setHasUnsavedChanges(true);
+      Alert.alert(
+        "Image Selected",
+        "Don't forget to save changes to update your profile picture!"
+      );
     }
   };
 
@@ -124,31 +162,67 @@ const ProfileScreen = () => {
     try {
       setLoading(true);
 
-      let imageUrl = image;
+      // Handle image upload first if needed
+      let newImageUrl = null;
       if (image && image.startsWith("file://")) {
-        const storage = getStorage();
-        const imageRef = ref(storage, `profile_images/${userId}`);
+        try {
+          console.log("Uploading image to Firebase Storage");
+          const storage = getStorage();
+          // Create a unique file path to avoid caching issues
+          const imageRef = ref(
+            storage,
+            `profile_pictures/${userId}_${Date.now()}`
+          );
 
-        const response = await fetch(image);
-        const blob = await response.blob();
+          const response = await fetch(image);
+          const blob = await response.blob();
 
-        await uploadBytes(imageRef, blob);
+          // Upload the image
+          await uploadBytes(imageRef, blob);
 
-        imageUrl = await getDownloadURL(imageRef);
+          // Get download URL
+          newImageUrl = await getDownloadURL(imageRef);
+          console.log("Upload successful, new image URL:", newImageUrl);
+        } catch (error) {
+          console.error("Error uploading image:", error);
+          Alert.alert("Error", "Failed to upload profile picture");
+          setLoading(false);
+          return;
+        }
       }
 
-      const userRef = doc(FIRESTORE_DB, "users", userId);
-      await updateDoc(userRef, {
-        photoURL: imageUrl,
-        availability,
-      });
+      // Save all profile data at once
+      const userRef = doc(FIREBASE_DB, "users", userId);
 
-      Alert.alert("Success", "Profile updated successfully!", [{ text: "OK" }]);
+      const updates = {
+        userAvailability: availability,
+        lastUpdated: new Date().toISOString(),
+      };
+
+      // Only add the image fields if we have a new image
+      if (newImageUrl) {
+        updates.photo = newImageUrl;
+        updates.photoURL = newImageUrl;
+        // Update local state with the new URL
+        setImage(newImageUrl);
+      }
+
+      await updateDoc(userRef, updates);
+
+      // Verify the data was saved
+      const verifyDoc = await getDoc(userRef);
+      if (verifyDoc.exists()) {
+        console.log(
+          "Verified data:",
+          JSON.stringify(verifyDoc.data(), null, 2)
+        );
+      }
+
+      Alert.alert("Success", "Profile updated successfully!");
+      setHasUnsavedChanges(false);
     } catch (error) {
       console.error("Error updating profile:", error);
-      Alert.alert("Error", "Failed to update profile. Please try again.", [
-        { text: "OK" },
-      ]);
+      Alert.alert("Error", "Failed to update profile");
     } finally {
       setLoading(false);
     }
@@ -156,11 +230,13 @@ const ProfileScreen = () => {
 
   const toggleAvailabilityDay = (day) => {
     setAvailability((prevAvailability) => {
-      if (prevAvailability.includes(day)) {
-        return prevAvailability.filter((d) => d !== day);
-      } else {
-        return [...prevAvailability, day];
-      }
+      const newAvailability = prevAvailability.includes(day)
+        ? prevAvailability.filter((d) => d !== day)
+        : [...prevAvailability, day];
+
+      // Set the unsaved changes flag when a day is toggled
+      setHasUnsavedChanges(true);
+      return newAvailability;
     });
   };
 
@@ -203,17 +279,30 @@ const ProfileScreen = () => {
                 onPress={pickImage}
                 style={styles.profilePicWrapper}
               >
-                <Image
-                  source={
-                    image
-                      ? { uri: image }
-                      : require("../../assets/images/default-avatar.png")
-                  }
-                  style={styles.profilePic}
-                />
-                <View style={styles.editIcon}>
-                  <MaterialIcons name="edit" size={20} color="white" />
-                </View>
+                {loading && image && image.startsWith("file://") ? (
+                  <ActivityIndicator
+                    size="large"
+                    color={Colors.light.primary}
+                  />
+                ) : (
+                  <Image
+                    key={image || "default"} // Key to force re-render
+                    source={
+                      image
+                        ? { uri: image }
+                        : require("../../assets/images/default-avatar.png")
+                    }
+                    style={styles.profilePic}
+                    resizeMode="cover"
+                  />
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.editIconContainer}
+                onPress={pickImage}
+              >
+                <MaterialIcons name="edit" size={20} color="white" />
               </TouchableOpacity>
             </View>
 
@@ -221,46 +310,40 @@ const ProfileScreen = () => {
             <View style={styles.detailsSection}>
               <Text style={styles.sectionTitle}>Personal Information</Text>
 
+              {/* Name field */}
               <View style={styles.inputContainer}>
                 <Text style={styles.label}>Name</Text>
-                <TextInput
-                  value={name}
-                  style={styles.input}
-                  disabled={true}
-                  mode="flat"
-                  contentStyle={styles.inputContent}
-                  underlineColor="transparent"
-                />
+                <View style={styles.displayField}>
+                  <Text style={styles.displayText}>
+                    {name || "Not provided"}
+                  </Text>
+                </View>
               </View>
 
+              {/* Age field */}
               <View style={styles.inputContainer}>
                 <Text style={styles.label}>Age</Text>
-                <TextInput
-                  value={age.toString()}
-                  style={styles.input}
-                  disabled={true}
-                  mode="flat"
-                  contentStyle={styles.inputContent}
-                  underlineColor="transparent"
-                />
+                <View style={styles.displayField}>
+                  <Text style={styles.displayText}>
+                    {age || "Not provided"}
+                  </Text>
+                </View>
               </View>
 
+              {/* Gender field */}
               <View style={styles.inputContainer}>
                 <Text style={styles.label}>Gender</Text>
-                <TextInput
-                  value={gender}
-                  style={styles.input}
-                  disabled={true}
-                  mode="flat"
-                  contentStyle={styles.inputContent}
-                  underlineColor="transparent"
-                />
+                <View style={styles.displayField}>
+                  <Text style={styles.displayText}>
+                    {gender || "Not provided"}
+                  </Text>
+                </View>
               </View>
 
               <View style={styles.inputContainer}>
                 <Text style={styles.label}>Sports Interests</Text>
                 <View style={styles.sportsContainer}>
-                  {sports.length > 0 ? (
+                  {sports && sports.length > 0 ? (
                     sports.map((sport) => (
                       <View key={sport} style={styles.sportChip}>
                         <Text style={styles.sportText}>{sport}</Text>
@@ -272,20 +355,18 @@ const ProfileScreen = () => {
                 </View>
               </View>
 
+              {/* Proficiency Level field */}
               <View style={styles.inputContainer}>
                 <Text style={styles.label}>Proficiency Level</Text>
-                <TextInput
-                  value={proficiencyLevel}
-                  style={styles.input}
-                  disabled={true}
-                  mode="flat"
-                  contentStyle={styles.inputContent}
-                  underlineColor="transparent"
-                />
+                <View style={styles.displayField}>
+                  <Text style={styles.displayText}>
+                    {proficiencyLevel || "Not provided"}
+                  </Text>
+                </View>
               </View>
             </View>
 
-            {/* Availability Section - Now with card styling */}
+            {/* Availability Section */}
             <View style={styles.cardSection}>
               <Text style={styles.sectionTitle}>Availability</Text>
               <Text style={styles.subtitle}>
@@ -315,10 +396,20 @@ const ProfileScreen = () => {
               </View>
             </View>
 
+            {hasUnsavedChanges && (
+              <Text style={styles.unsavedChangesText}>
+                Don't forget to save your changes!
+              </Text>
+            )}
+
             <Button
               mode="contained"
               onPress={handleUpdateProfile}
-              style={[styles.saveButton, loading && styles.disabledButton]}
+              style={[
+                styles.saveButton,
+                loading && styles.disabledButton,
+                hasUnsavedChanges && styles.saveButtonHighlight,
+              ]}
               loading={loading}
               disabled={loading}
             >
@@ -353,24 +444,33 @@ const styles = StyleSheet.create({
   profileContainer: {
     alignItems: "center",
     marginBottom: 20,
+    position: "relative",
   },
   profilePicWrapper: {
-    position: "relative",
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: "#f0f0f0",
+    borderWidth: 2,
+    borderColor: Colors.light.primary,
+    overflow: "hidden", // Critical for the circular crop
+    justifyContent: "center",
+    alignItems: "center",
   },
   profilePic: {
     width: 120,
     height: 120,
-    borderRadius: 60,
-    borderWidth: 2,
-    borderColor: "#7e22ce",
   },
-  editIcon: {
+  editIconContainer: {
     position: "absolute",
-    bottom: 5,
-    right: 5,
-    backgroundColor: "#7e22ce",
-    padding: 5,
-    borderRadius: 15,
+    bottom: 0,
+    right: "35%",
+    backgroundColor: Colors.light.primary,
+    padding: 8,
+    borderRadius: 20,
+    zIndex: 10,
+    marginRight: "5%",
+    marginBottom: "0%",
   },
   sectionTitle: {
     fontSize: 20,
@@ -419,6 +519,19 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E2E8F0",
   },
+  displayField: {
+    backgroundColor: "#f8f8f8",
+    height: 48,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    justifyContent: "center",
+    paddingHorizontal: 12,
+  },
+  displayText: {
+    fontSize: 16,
+    color: Colors.light.text,
+  },
   sportChip: {
     backgroundColor: Colors.light.primary,
     paddingHorizontal: 12,
@@ -432,24 +545,6 @@ const styles = StyleSheet.create({
   noDataText: {
     color: Colors.light.textSecondary,
     fontStyle: "italic",
-  },
-  input: {
-    backgroundColor: "#f8f8f8",
-    height: 48,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-  inputContent: {
-    backgroundColor: "#f8f8f8",
-    color: Colors.light.text,
-    fontSize: 16,
-    paddingHorizontal: 12,
-  },
-  disabledInput: {
-    opacity: 0.8,
-    backgroundColor: "#f8f8f8",
-    color: Colors.light.text,
   },
   label: {
     fontSize: 14,
@@ -479,8 +574,8 @@ const styles = StyleSheet.create({
     borderColor: "#c4a8ff",
   },
   selectedDayButton: {
-    backgroundColor: "#863f9c",
-    borderColor: "#7e22ce",
+    backgroundColor: Colors.light.primary,
+    borderColor: Colors.light.primary,
   },
   dayText: {
     color: "#333",
@@ -492,10 +587,21 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     marginTop: 20,
-    backgroundColor: "#863f9c",
+    backgroundColor: Colors.light.primary,
   },
   disabledButton: {
     backgroundColor: "#c4a8ff",
+  },
+  saveButtonHighlight: {
+    backgroundColor: "#ff8c00",
+    elevation: 4,
+  },
+  unsavedChangesText: {
+    color: "#ff6347",
+    fontSize: 14,
+    textAlign: "center",
+    marginTop: 8,
+    fontWeight: "500",
   },
   header: {
     flexDirection: "row",
