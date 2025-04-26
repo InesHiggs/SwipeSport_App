@@ -7,6 +7,9 @@ import {
   TouchableOpacity,
   Dimensions,
   ActivityIndicator,
+  Modal,
+  TextInput,
+  Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -22,33 +25,7 @@ import {
   getDoc,
   updateDoc,
 } from "firebase/firestore";
-
-async function updateExistingUsers() {
-  const usersCollection = collection(FIREBASE_DB, "users");
-  const usersSnapshot = await getDocs(usersCollection);
-
-  usersSnapshot.forEach(async (userDoc) => {
-    const userData = userDoc.data();
-    if (userData.proficiencyLevel && !userData.levelPreference) {
-      await updateDoc(doc(FIREBASE_DB, "users", userDoc.id), {
-        levelPreference: [userData.proficiencyLevel],
-      });
-    }
-  });
-}
-
-// Type guard for user data
-function isUser(data) {
-  return (
-    typeof data === "object" &&
-    data !== null &&
-    "uid" in data &&
-    "name" in data &&
-    "proficiencyLevel" in data &&
-    "availability" in data &&
-    "age" in data
-  );
-}
+import * as Location from "expo-location";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -56,46 +33,125 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState(null);
 
+  // Location state variables
+  const [location, setLocation] = useState(null);
+  const [locationName, setLocationName] = useState("Getting location...");
+  const [locationModalVisible, setLocationModalVisible] = useState(false);
+  const [customLocation, setCustomLocation] = useState("");
+  const [locationLoading, setLocationLoading] = useState(false);
+
   // Helper function to calculate common days
   const daysInCommon = (days1, days2) => {
+    if (!Array.isArray(days1) || !Array.isArray(days2)) return 0;
     const set1 = new Set(days1);
     return days2.filter((day) => set1.has(day)).length;
+  };
+
+  // Get user's current location
+  useEffect(() => {
+    (async () => {
+      try {
+        setLocationLoading(true);
+        let { status } = await Location.requestForegroundPermissionsAsync();
+
+        if (status !== "granted") {
+          setLocationName("Location permission denied");
+          return;
+        }
+
+        let currentLocation = await Location.getCurrentPositionAsync({});
+        setLocation(currentLocation);
+
+        // Reverse geocode to get readable address
+        const geocode = await Location.reverseGeocodeAsync({
+          latitude: currentLocation.coords.latitude,
+          longitude: currentLocation.coords.longitude,
+        });
+
+        if (geocode && geocode.length > 0) {
+          const address = geocode[0];
+          const locationString =
+            address.city || address.region || "Unknown location";
+          setLocationName(locationString);
+        }
+      } catch (error) {
+        console.error("Error getting location:", error);
+        setLocationName("Location unavailable");
+      } finally {
+        setLocationLoading(false);
+      }
+    })();
+  }, []);
+
+  // Handle custom location change
+  const handleChangeLocation = async () => {
+    if (customLocation.trim()) {
+      try {
+        setLocationLoading(true);
+        // Save custom location to user profile
+        if (FIREBASE_AUTH.currentUser) {
+          const userRef = doc(
+            FIREBASE_DB,
+            "users",
+            FIREBASE_AUTH.currentUser.uid
+          );
+          await updateDoc(userRef, {
+            customLocation: customLocation,
+            lastUpdated: new Date().toISOString(),
+          });
+        }
+        setLocationName(customLocation);
+        setLocationModalVisible(false);
+      } catch (error) {
+        console.error("Error updating location:", error);
+      } finally {
+        setLocationLoading(false);
+      }
+    }
   };
 
   // Fetch user data and potential matches
   useEffect(() => {
     const fetchData = async () => {
       try {
-        await updateExistingUsers();
         const user = FIREBASE_AUTH.currentUser;
 
         if (user) {
           const userDoc = await getDoc(doc(FIREBASE_DB, "users", user.uid));
           const userData = userDoc.data();
 
-          if (userDoc.exists() && isUser(userData)) {
+          if (userDoc.exists() && userData) {
             setCurrentUser(userData);
+
+            // Use custom location if available
+            if (userData.customLocation) {
+              setLocationName(userData.customLocation);
+            }
 
             const usersCollection = collection(FIREBASE_DB, "users");
             const usersSnapshot = await getDocs(query(usersCollection));
 
+            // Filter users with the same sport interest
             const potentialMatches = usersSnapshot.docs
               .map((doc) => {
                 const data = doc.data();
-                if (!isUser(data)) return null;
                 return { ...data, id: doc.id };
               })
               .filter((match) => {
-                if (!match) return false;
                 return (
                   match.uid !== user.uid &&
-                  userData.levelPreference.includes(match.proficiencyLevel)
+                  match.sportName === userData.sportName
                 );
               })
               .sort((a, b) => {
+                const availA = a.userAvailability || a.availability || [];
+                const availB = b.userAvailability || b.availability || [];
+                const userAvail =
+                  userData.userAvailability || userData.availability || [];
+
                 return (
-                  daysInCommon(userData.availability, b.availability) -
-                  daysInCommon(userData.availability, a.availability)
+                  daysInCommon(userAvail, availB) -
+                  daysInCommon(userAvail, availA)
                 );
               });
 
@@ -119,16 +175,150 @@ export default function HomeScreen() {
     }
   };
 
+  // Calculate age from dateOfBirth
+  const calculateAge = (dateOfBirth) => {
+    if (!dateOfBirth) return null;
+
+    try {
+      const dob = new Date(dateOfBirth);
+      const today = new Date();
+      let age = today.getFullYear() - dob.getFullYear();
+
+      if (
+        today.getMonth() < dob.getMonth() ||
+        (today.getMonth() === dob.getMonth() && today.getDate() < dob.getDate())
+      ) {
+        age--;
+      }
+
+      return age;
+    } catch (e) {
+      return null;
+    }
+  };
+
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.locationButton}>
-          <Ionicons name="location" size={24} color={Colors.light.primary} />
+        <TouchableOpacity
+          style={styles.locationButton}
+          onPress={() => setLocationModalVisible(true)}
+        >
+          {locationLoading ? (
+            <ActivityIndicator size="small" color={Colors.light.primary} />
+          ) : (
+            <>
+              <Ionicons
+                name="location"
+                size={24}
+                color={Colors.light.primary}
+              />
+              <Text style={styles.locationText} numberOfLines={1}>
+                {locationName}
+              </Text>
+            </>
+          )}
         </TouchableOpacity>
         <Text style={styles.headerTitle}>SwipeSport</Text>
         <View style={styles.placeholder} />
       </View>
+
+      {/* Location Change Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={locationModalVisible}
+        onRequestClose={() => setLocationModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Set Your Location</Text>
+              <TouchableOpacity onPress={() => setLocationModalVisible(false)}>
+                <Ionicons name="close" size={24} color={Colors.light.text} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.modalBody}>
+              <Text style={styles.currentLocationLabel}>Current Location:</Text>
+              <Text style={styles.currentLocation}>{locationName}</Text>
+
+              <Text style={styles.customLocationLabel}>
+                Enter Custom Location:
+              </Text>
+              <TextInput
+                value={customLocation}
+                onChangeText={setCustomLocation}
+                placeholder="Enter city or area"
+                style={styles.customLocationInput}
+                autoCapitalize="words"
+              />
+
+              <TouchableOpacity
+                style={styles.setLocationButton}
+                onPress={handleChangeLocation}
+                disabled={!customLocation.trim() || locationLoading}
+              >
+                {locationLoading ? (
+                  <ActivityIndicator size="small" color="#000" />
+                ) : (
+                  <Text style={styles.setLocationButtonText}>
+                    Update Location
+                  </Text>
+                )}
+              </TouchableOpacity>
+
+              {location && (
+                <TouchableOpacity
+                  style={styles.useCurrentButton}
+                  onPress={async () => {
+                    try {
+                      setLocationLoading(true);
+                      const geocode = await Location.reverseGeocodeAsync({
+                        latitude: location.coords.latitude,
+                        longitude: location.coords.longitude,
+                      });
+
+                      if (geocode && geocode.length > 0) {
+                        const address = geocode[0];
+                        const locationString =
+                          address.city || address.region || "Unknown location";
+                        setLocationName(locationString);
+
+                        // Save to user profile
+                        if (FIREBASE_AUTH.currentUser) {
+                          const userRef = doc(
+                            FIREBASE_DB,
+                            "users",
+                            FIREBASE_AUTH.currentUser.uid
+                          );
+                          await updateDoc(userRef, {
+                            customLocation: locationString,
+                            lastUpdated: new Date().toISOString(),
+                          });
+                        }
+                      }
+                      setLocationModalVisible(false);
+                    } catch (error) {
+                      console.error(
+                        "Error updating to current location:",
+                        error
+                      );
+                    } finally {
+                      setLocationLoading(false);
+                    }
+                  }}
+                >
+                  <Text style={styles.useCurrentButtonText}>
+                    Use Current Location
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Swiper */}
       <View style={styles.swiperContainer}>
@@ -142,7 +332,12 @@ export default function HomeScreen() {
           if (users.length === 0) {
             return (
               <View style={styles.noMatchesContainer}>
-                <Text style={styles.noMatchesText}>No matches found</Text>
+                <Text style={styles.noMatchesText}>
+                  No {currentUser?.sportName} players found
+                </Text>
+                <Text style={styles.noMatchesSubtext}>
+                  We couldn't find any users who play {currentUser?.sportName}
+                </Text>
               </View>
             );
           }
@@ -167,21 +362,54 @@ export default function HomeScreen() {
                     <View style={styles.cardDetails}>
                       <View style={styles.nameRow}>
                         <Text style={styles.cardName}>{card.name}</Text>
-                        <Text style={styles.cardAge}>, {card.age}</Text>
+                        <Text style={styles.cardAge}>
+                          {calculateAge(card.dateOfBirth)
+                            ? `, ${calculateAge(card.dateOfBirth)}`
+                            : ""}
+                        </Text>
                       </View>
-                      <Text style={styles.cardPronouns}>{card.pronouns}</Text>
+
                       <View style={styles.infoRow}>
                         <View style={styles.infoPill}>
                           <Text style={styles.infoText}>
-                            {card.proficiencyLevel}
+                            {card.sportName || currentUser.sportName}
                           </Text>
                         </View>
                         <View style={styles.infoPill}>
                           <Text style={styles.infoText}>
-                            {Array.isArray(card.availability)
-                              ? card.availability.join(", ")
-                              : card.availability}
+                            {card.proficiencyLevel || "No level"}
                           </Text>
+                        </View>
+                      </View>
+
+                      <View style={styles.availabilityContainer}>
+                        <Text style={styles.availabilityTitle}>
+                          Available on:
+                        </Text>
+                        <View style={styles.daysRow}>
+                          {card.userAvailability &&
+                          card.userAvailability.length > 0 ? (
+                            card.userAvailability.map((day) => (
+                              <View key={day} style={styles.dayPill}>
+                                <Text style={styles.dayText}>
+                                  {day.substring(0, 3)}
+                                </Text>
+                              </View>
+                            ))
+                          ) : card.availability &&
+                            card.availability.length > 0 ? (
+                            card.availability.map((day) => (
+                              <View key={day} style={styles.dayPill}>
+                                <Text style={styles.dayText}>
+                                  {day.substring(0, 3)}
+                                </Text>
+                              </View>
+                            ))
+                          ) : (
+                            <Text style={styles.noAvailabilityText}>
+                              No availability set
+                            </Text>
+                          )}
                         </View>
                       </View>
                     </View>
@@ -214,6 +442,9 @@ export default function HomeScreen() {
                   },
                 },
               }}
+              animateOverlayLabelsOpacity
+              animateCardOpacity
+              swipeBackCard
             />
           );
         })()}
@@ -233,12 +464,22 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingTop: 10,
-    paddingBottom: 8, // Reduced from default
+    paddingBottom: 8,
     borderBottomWidth: 1,
     borderBottomColor: "#E2E8F0",
   },
   locationButton: {
+    flexDirection: "row",
+    alignItems: "center",
     padding: 8,
+    maxWidth: "40%",
+  },
+  locationText: {
+    color: Colors.light.primary,
+    fontSize: 14,
+    fontWeight: "500",
+    marginLeft: 4,
+    maxWidth: 100,
   },
   headerTitle: {
     fontSize: 24,
@@ -248,20 +489,100 @@ const styles = StyleSheet.create({
   placeholder: {
     width: 40,
   },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-end",
+  },
+  modalContent: {
+    backgroundColor: "white",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingVertical: 20,
+    maxHeight: "60%",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E2E8F0",
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: Colors.light.text,
+  },
+  modalBody: {
+    padding: 20,
+  },
+  currentLocationLabel: {
+    fontSize: 14,
+    color: Colors.light.textSecondary,
+    marginBottom: 8,
+  },
+  currentLocation: {
+    fontSize: 16,
+    fontWeight: "500",
+    color: Colors.light.text,
+    marginBottom: 20,
+  },
+  customLocationLabel: {
+    fontSize: 14,
+    color: Colors.light.textSecondary,
+    marginBottom: 8,
+  },
+  customLocationInput: {
+    height: 50,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    fontSize: 16,
+    marginBottom: 20,
+  },
+  setLocationButton: {
+    backgroundColor: Colors.light.primary,
+    height: 50,
+    borderRadius: 8,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  setLocationButtonText: {
+    color: "#000",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  useCurrentButton: {
+    height: 50,
+    borderRadius: 8,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: Colors.light.primary,
+  },
+  useCurrentButtonText: {
+    color: Colors.light.primary,
+    fontSize: 16,
+    fontWeight: "500",
+  },
   swiperContainer: {
     flex: 1,
     position: "relative",
-    paddingHorizontal: 40, // Add horizontal padding
-    paddingBottom: 40, // Increase bottom padding to avoid navbar overlap
-    paddingTop: 40, // Add top padding to reduce gap
+    paddingHorizontal: 40,
+    paddingBottom: 40,
+    paddingTop: 40,
   },
   swiperContainerStyle: {
     backgroundColor: "transparent",
   },
   cardStyle: {
     top: 0,
-    width: "100%", // Take full width of container (minus padding)
-    height: "100%", // Take full height of container
+    width: "100%",
+    height: "100%",
   },
   card: {
     flex: 1,
@@ -273,8 +594,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
-    height: Dimensions.get("window").height - 220, // Reduced height by 20
-    marginTop: -20, // Add negative margin to move card up
+    height: Dimensions.get("window").height - 220,
+    marginTop: -20,
   },
   cardImage: {
     width: "100%",
@@ -286,12 +607,12 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: "40%",
+    height: "50%", // Increased gradient height for more content
     padding: 20,
     justifyContent: "flex-end",
   },
   cardDetails: {
-    gap: 4,
+    gap: 8,
   },
   nameRow: {
     flexDirection: "row",
@@ -306,15 +627,10 @@ const styles = StyleSheet.create({
     fontSize: 22,
     color: "#fff",
   },
-  cardPronouns: {
-    fontSize: 16,
-    color: "#fff",
-    opacity: 0.8,
-  },
   infoRow: {
     flexDirection: "row",
     gap: 8,
-    marginTop: 8,
+    marginTop: 4,
   },
   infoPill: {
     backgroundColor: "rgba(255,255,255,0.2)",
@@ -325,6 +641,36 @@ const styles = StyleSheet.create({
   infoText: {
     color: "#fff",
     fontSize: 14,
+  },
+  availabilityContainer: {
+    marginTop: 10,
+  },
+  availabilityTitle: {
+    color: "#fff",
+    fontSize: 14,
+    opacity: 0.9,
+  },
+  daysRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    marginTop: 4,
+  },
+  dayPill: {
+    backgroundColor: "rgba(255,255,255,0.3)",
+    paddingVertical: 2,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+  },
+  dayText: {
+    color: "#fff",
+    fontSize: 12,
+  },
+  noAvailabilityText: {
+    color: "#fff",
+    fontSize: 12,
+    fontStyle: "italic",
+    opacity: 0.7,
   },
   overlayLabel: {
     fontSize: 25,
@@ -343,10 +689,18 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    paddingHorizontal: 20,
   },
   noMatchesText: {
-    fontSize: 18,
+    fontSize: 20,
+    fontWeight: "bold",
     color: Colors.light.text,
+    textAlign: "center",
+    marginBottom: 12,
+  },
+  noMatchesSubtext: {
+    fontSize: 16,
+    color: Colors.light.textSecondary,
     textAlign: "center",
   },
 });

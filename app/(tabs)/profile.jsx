@@ -11,6 +11,8 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  Modal,
+  FlatList,
 } from "react-native";
 import { Button, Provider } from "react-native-paper";
 import * as ImagePicker from "expo-image-picker";
@@ -22,21 +24,38 @@ import { onAuthStateChanged } from "firebase/auth";
 import { Colors } from "../../constants/Colors";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
+// Add sports mapping from signup.tsx
+const sportsMapping = {
+  "⚽️": "Football",
+  "🏀": "Basketball",
+  "🎾": "Tennis",
+  "🏈": "American Football",
+  "🏉": "Rugby",
+  "🏸": "Badminton",
+  "🏏": "Cricket",
+  "🎱": "Pool",
+  "🏓": "Table Tennis",
+  "🏑": "Hockey",
+  "⛳️": "Golf",
+  "🏊‍♂️": "Swimming",
+  "🏃‍♂️": "Running",
+  "🚴‍♂️": "Cycling",
+  "🤾‍♂️": "Handball",
+  "🏋️‍♂️": "Weight Lifting",
+};
+
 // Firebase profile image helper component built directly into this file
 const FirebaseProfileImage = ({ userId, style, defaultImage }) => {
   const [imageUrl, setImageUrl] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [loadAttempts, setLoadAttempts] = useState(0);
-  const [debugMessage, setDebugMessage] = useState(
-    "Initializing image fetch..."
-  );
 
+  // Function to check if the image exists in Firebase Storage
   useEffect(() => {
     const fetchFreshImageUrl = async () => {
       if (!userId) {
         console.log("No userId provided for image fetch");
-        setDebugMessage("No userId provided");
         setLoading(false);
         return;
       }
@@ -47,32 +66,21 @@ const FirebaseProfileImage = ({ userId, style, defaultImage }) => {
             loadAttempts + 1
           })`
         );
-        setDebugMessage(`Fetching image (attempt ${loadAttempts + 1})...`);
         setLoading(true);
 
         const storage = getStorage();
         const imageRef = ref(storage, `profile_images/${userId}`);
 
-        // Try to get the download URL (this may throw if not found or due to network issues)
+        // Try to get the download URL - this will throw an error if the image doesn't exist
         const url = await getDownloadURL(imageRef);
         console.log("✅ Success! Firebase image URL fetched:", url);
         setImageUrl(url);
-        setDebugMessage("Image successfully fetched!");
         setError(false);
       } catch (err) {
+        // Check if the error is because the image doesn't exist
         if (err.code === "storage/object-not-found") {
           console.log(
             "❌ Image not found in Firebase Storage - no profile picture has been uploaded yet"
-          );
-          setDebugMessage("No profile picture has been uploaded yet.");
-        } else if (err.code === "storage/retry-limit-exceeded") {
-          console.error(
-            "❌ Firebase image fetch error:",
-            err.code,
-            err.message
-          );
-          setDebugMessage(
-            "Retry limit exceeded. Something is taking too long or your network may be slow."
           );
         } else {
           console.error(
@@ -80,7 +88,6 @@ const FirebaseProfileImage = ({ userId, style, defaultImage }) => {
             err.code,
             err.message
           );
-          setDebugMessage(`Error: ${err.code} - ${err.message}`);
         }
         setError(true);
       } finally {
@@ -91,60 +98,56 @@ const FirebaseProfileImage = ({ userId, style, defaultImage }) => {
     fetchFreshImageUrl();
   }, [userId, loadAttempts]);
 
-  // Display a loading spinner with the debug message while loading
+  // Render functions
   if (loading) {
     return (
       <View style={[{ justifyContent: "center", alignItems: "center" }, style]}>
         <ActivityIndicator size="large" color={Colors.light.primary} />
         <Text style={{ fontSize: 10, marginTop: 5, color: "#666" }}>
-          {debugMessage}
+          Loading image...
         </Text>
       </View>
     );
   }
 
-  // If error or no URL available, show default image with a retry overlay that displays the debug message
   if (error || !imageUrl) {
+    // Show default image with retry option
     return (
       <TouchableOpacity
         style={[{ justifyContent: "center", alignItems: "center" }, style]}
         onPress={() => setLoadAttempts((prev) => prev + 1)}
       >
         <Image source={defaultImage} style={style} resizeMode="cover" />
-        <View
-          style={{
-            position: "absolute",
-            bottom: 0,
-            backgroundColor: "rgba(0,0,0,0.6)",
-            width: "100%",
-            padding: 3,
-          }}
-        >
-          <Text style={{ color: "#fff", fontSize: 10, textAlign: "center" }}>
-            {debugMessage} {"\n"}Tap to retry
-          </Text>
-        </View>
+        {error && (
+          <View
+            style={{
+              position: "absolute",
+              bottom: 0,
+              backgroundColor: "rgba(0,0,0,0.6)",
+              width: "100%",
+              padding: 3,
+            }}
+          >
+            <Text style={{ color: "#fff", fontSize: 10, textAlign: "center" }}>
+              Tap to retry
+            </Text>
+          </View>
+        )}
       </TouchableOpacity>
     );
   }
 
-  // Lastly, if we have a valid URL, render the image with onLoad and onError logging
+  // If we have a valid URL, show the image with proper error handling
   return (
     <Image
       source={{ uri: imageUrl }}
       style={style}
       resizeMode="cover"
-      onLoadStart={() => {
-        console.log("Image loading started:", imageUrl);
-        setDebugMessage("Image loading started...");
-      }}
-      onLoad={() => {
-        console.log("Image loaded successfully");
-        setDebugMessage("Image loaded successfully");
-      }}
+      onLoadStart={() => console.log("Image loading started:", imageUrl)}
+      onLoad={() => console.log("Image loaded successfully")}
       onError={(e) => {
         console.log("Image load error:", e.nativeEvent.error);
-        setDebugMessage(`Image load error: ${e.nativeEvent.error}`);
+        // If there's an error loading the image after we got a URL, show an error state
         setError(true);
       }}
     />
@@ -165,6 +168,11 @@ const ProfileScreen = () => {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isLocalImage, setIsLocalImage] = useState(false);
 
+  // New state variables for the sports dropdown
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedSport, setSelectedSport] = useState("");
+  const [selectedEmoji, setSelectedEmoji] = useState("");
+
   const router = useRouter();
 
   const daysOfWeek = [
@@ -176,6 +184,12 @@ const ProfileScreen = () => {
     "Saturday",
     "Sunday",
   ];
+
+  // Create array of sports for the dropdown
+  const sportsList = Object.entries(sportsMapping).map(([emoji, name]) => ({
+    emoji,
+    name,
+  }));
 
   const handleLogout = async () => {
     try {
@@ -219,20 +233,28 @@ const ProfileScreen = () => {
           }
 
           setGender(userData.gender || "");
-          setSports(userData.sportName ? [userData.sportName] : []);
+
+          // Get sports from userData
+          const userSport = userData.sportName || "";
+          setSports(userSport ? [userSport] : []);
+          setSelectedSport(userSport || "");
+
+          // Find emoji for the sport
+          const emojiEntry = Object.entries(sportsMapping).find(
+            ([emoji, name]) => name === userSport
+          );
+          setSelectedEmoji(emojiEntry ? emojiEntry[0] : "");
+
           setProficiencyLevel(userData.proficiencyLevel || "");
           setAvailability(
             Array.isArray(availabilityData) ? availabilityData : []
           );
 
-          // For image handling, just note if we have a Firebase image
-          // We'll load it using the FirebaseProfileImage component
+          // Handle image
           const imageUrl = userData.photo || userData.photoURL;
           if (imageUrl && !imageUrl.startsWith("file://")) {
-            // This indicates we have an image in Firebase, but we'll load it fresh
             setIsLocalImage(false);
           } else if (imageUrl && imageUrl.startsWith("file://")) {
-            // This is a local image that hasn't been uploaded yet
             setIsLocalImage(true);
             setImage(imageUrl);
           } else {
@@ -275,6 +297,15 @@ const ProfileScreen = () => {
       setIsLocalImage(true);
       setHasUnsavedChanges(true);
     }
+  };
+
+  // Function to handle sport selection
+  const handleSelectSport = (emoji, sportName) => {
+    setSelectedEmoji(emoji);
+    setSelectedSport(sportName);
+    setSports([sportName]);
+    setModalVisible(false);
+    setHasUnsavedChanges(true);
   };
 
   const handleUpdateProfile = async () => {
@@ -326,6 +357,12 @@ const ProfileScreen = () => {
         userAvailability: availability,
         lastUpdated: new Date().toISOString(),
       };
+
+      // Add sport updates if we have a selected sport
+      if (selectedSport) {
+        updates.sportName = selectedSport;
+        updates.sport = selectedEmoji;
+      }
 
       // Only add the image fields if we have a new image
       if (newImageUrl) {
@@ -399,14 +436,14 @@ const ProfileScreen = () => {
                     color={Colors.light.primary}
                   />
                 ) : isLocalImage ? (
-                  // This branch is for a newly selected local image.
+                  // Local image (newly selected, not yet uploaded)
                   <Image
                     source={{ uri: image }}
                     style={styles.profilePic}
                     resizeMode="cover"
                   />
                 ) : (
-                  // This branch uses the FirebaseProfileImage to fetch the remote image.
+                  // Firebase image (or default if none exists)
                   <FirebaseProfileImage
                     userId={userId}
                     style={styles.profilePic}
@@ -414,51 +451,7 @@ const ProfileScreen = () => {
                   />
                 )}
               </TouchableOpacity>
-              <TouchableOpacity
-                style={{
-                  backgroundColor: "#f0f0f0",
-                  padding: 10,
-                  alignItems: "center",
-                  marginVertical: 10,
-                  borderRadius: 5,
-                }}
-                onPress={async () => {
-                  try {
-                    const storage = getStorage();
-                    const imageRef = ref(storage, `profile_images/${userId}`);
 
-                    // Check if image exists
-                    try {
-                      const url = await getDownloadURL(imageRef);
-                      Alert.alert(
-                        "Profile Image Status",
-                        `Image exists at path: profile_images/${userId}\n\nURL: ${url.substring(
-                          0,
-                          50
-                        )}...`
-                      );
-                    } catch (err) {
-                      if (err.code === "storage/object-not-found") {
-                        Alert.alert(
-                          "Profile Image Status",
-                          "No image found at this path. You need to upload a profile picture first."
-                        );
-                      } else {
-                        Alert.alert(
-                          "Error",
-                          `Failed to check image: ${err.message}`
-                        );
-                      }
-                    }
-                  } catch (e) {
-                    console.error(e);
-                  }
-                }}
-              >
-                <Text style={{ color: Colors.light.textSecondary }}>
-                  Debug: Check Image Status
-                </Text>
-              </TouchableOpacity>
               <TouchableOpacity
                 style={styles.editIconContainer}
                 onPress={pickImage}
@@ -467,7 +460,7 @@ const ProfileScreen = () => {
               </TouchableOpacity>
             </View>
 
-            {/* Rest of profile UI */}
+            {/* User Details Section */}
             <View style={styles.detailsSection}>
               <Text style={styles.sectionTitle}>Personal Information</Text>
 
@@ -498,19 +491,27 @@ const ProfileScreen = () => {
                 </View>
               </View>
 
+              {/* Sports Interest - Updated to be editable */}
               <View style={styles.inputContainer}>
-                <Text style={styles.label}>Sports Interests</Text>
-                <View style={styles.sportsContainer}>
-                  {sports && sports.length > 0 ? (
-                    sports.map((sport) => (
-                      <View key={sport} style={styles.sportChip}>
-                        <Text style={styles.sportText}>{sport}</Text>
-                      </View>
-                    ))
-                  ) : (
-                    <Text style={styles.noDataText}>No sports selected</Text>
-                  )}
-                </View>
+                <Text style={styles.label}>Sports Interest</Text>
+                <TouchableOpacity
+                  style={styles.dropdownField}
+                  onPress={() => setModalVisible(true)}
+                >
+                  <View style={styles.dropdownContent}>
+                    {selectedEmoji && (
+                      <Text style={styles.emojiText}>{selectedEmoji}</Text>
+                    )}
+                    <Text style={styles.displayText}>
+                      {selectedSport || "Select a sport"}
+                    </Text>
+                  </View>
+                  <MaterialIcons
+                    name="arrow-drop-down"
+                    size={24}
+                    color={Colors.light.textSecondary}
+                  />
+                </TouchableOpacity>
               </View>
 
               <View style={styles.inputContainer}>
@@ -572,6 +573,55 @@ const ProfileScreen = () => {
               {loading ? "Saving..." : "Save Changes"}
             </Button>
           </ScrollView>
+
+          {/* Sports Selection Modal */}
+          <Modal
+            animationType="slide"
+            transparent={true}
+            visible={modalVisible}
+            onRequestClose={() => setModalVisible(false)}
+          >
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalContent}>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>Select Sport</Text>
+                  <TouchableOpacity onPress={() => setModalVisible(false)}>
+                    <MaterialIcons
+                      name="close"
+                      size={24}
+                      color={Colors.light.text}
+                    />
+                  </TouchableOpacity>
+                </View>
+
+                <FlatList
+                  data={sportsList}
+                  keyExtractor={(item) => item.emoji}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity
+                      style={[
+                        styles.sportItem,
+                        selectedEmoji === item.emoji &&
+                          styles.selectedSportItem,
+                      ]}
+                      onPress={() => handleSelectSport(item.emoji, item.name)}
+                    >
+                      <Text style={styles.sportItemEmoji}>{item.emoji}</Text>
+                      <Text style={styles.sportItemText}>{item.name}</Text>
+                      {selectedEmoji === item.emoji && (
+                        <MaterialIcons
+                          name="check"
+                          size={20}
+                          color={Colors.light.primary}
+                        />
+                      )}
+                    </TouchableOpacity>
+                  )}
+                  style={styles.sportsList}
+                />
+              </View>
+            </View>
+          </Modal>
         </KeyboardAvoidingView>
       </Provider>
     </SafeAreaView>
@@ -776,6 +826,74 @@ const styles = StyleSheet.create({
     marginLeft: 4,
     color: Colors.light.primary,
     fontWeight: "500",
+  },
+  // Add new styles for the dropdown and modal
+  dropdownField: {
+    height: 48,
+    borderWidth: 1,
+    borderRadius: 8,
+    borderColor: "#E2E8F0",
+    backgroundColor: "#f8f8f8",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 12,
+  },
+  dropdownContent: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  emojiText: {
+    fontSize: 20,
+    marginRight: 8,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-end",
+  },
+  modalContent: {
+    backgroundColor: "white",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingVertical: 20,
+    maxHeight: "70%",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E2E8F0",
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: Colors.light.text,
+  },
+  sportsList: {
+    marginTop: 10,
+  },
+  sportItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 15,
+    borderBottomWidth: 0.5,
+    borderBottomColor: "#E2E8F0",
+  },
+  selectedSportItem: {
+    backgroundColor: "rgba(167, 223, 48, 0.1)",
+  },
+  sportItemEmoji: {
+    fontSize: 24,
+    marginRight: 15,
+  },
+  sportItemText: {
+    fontSize: 16,
+    flex: 1,
+    color: Colors.light.text,
   },
 });
 
