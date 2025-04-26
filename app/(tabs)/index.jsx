@@ -7,9 +7,7 @@ import {
   TouchableOpacity,
   Dimensions,
   ActivityIndicator,
-  Modal,
-  TextInput,
-  Platform,
+  Alert,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -25,7 +23,6 @@ import {
   getDoc,
   updateDoc,
 } from "firebase/firestore";
-import * as Location from "expo-location";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -33,12 +30,10 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState(null);
 
-  // Location state variables
-  const [location, setLocation] = useState(null);
+  // New state variables for location
   const [locationName, setLocationName] = useState("Getting location...");
-  const [locationModalVisible, setLocationModalVisible] = useState(false);
-  const [customLocation, setCustomLocation] = useState("");
-  const [locationLoading, setLocationLoading] = useState(false);
+  const [isLocationLoading, setIsLocationLoading] = useState(true);
+  const [locationError, setLocationError] = useState(false);
 
   // Helper function to calculate common days
   const daysInCommon = (days1, days2) => {
@@ -47,71 +42,100 @@ export default function HomeScreen() {
     return days2.filter((day) => set1.has(day)).length;
   };
 
-  // Get user's current location
-  useEffect(() => {
-    (async () => {
-      try {
-        setLocationLoading(true);
-        let { status } = await Location.requestForegroundPermissionsAsync();
+  // Get current location
+  const getCurrentLocation = () => {
+    setIsLocationLoading(true);
+    setLocationName("Getting location...");
 
-        if (status !== "granted") {
-          setLocationName("Location permission denied");
-          return;
-        }
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          // Successfully got coordinates
+          const { latitude, longitude } = position.coords;
+          console.log("Current coordinates:", latitude, longitude);
 
-        let currentLocation = await Location.getCurrentPositionAsync({});
-        setLocation(currentLocation);
+          try {
+            // Use reverse geocoding to get readable location
+            const response = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
+            );
+            const data = await response.json();
 
-        // Reverse geocode to get readable address
-        const geocode = await Location.reverseGeocodeAsync({
-          latitude: currentLocation.coords.latitude,
-          longitude: currentLocation.coords.longitude,
-        });
+            // Extract city or town name from the response
+            const locationString =
+              data.address?.city ||
+              data.address?.town ||
+              data.address?.village ||
+              data.address?.county ||
+              "Unknown location";
 
-        if (geocode && geocode.length > 0) {
-          const address = geocode[0];
-          const locationString =
-            address.city || address.region || "Unknown location";
-          setLocationName(locationString);
-        }
-      } catch (error) {
-        console.error("Error getting location:", error);
-        setLocationName("Location unavailable");
-      } finally {
-        setLocationLoading(false);
-      }
-    })();
-  }, []);
+            console.log("Location found:", locationString);
+            setLocationName(locationString);
 
-  // Handle custom location change
-  const handleChangeLocation = async () => {
-    if (customLocation.trim()) {
-      try {
-        setLocationLoading(true);
-        // Save custom location to user profile
-        if (FIREBASE_AUTH.currentUser) {
-          const userRef = doc(
-            FIREBASE_DB,
-            "users",
-            FIREBASE_AUTH.currentUser.uid
+            // Save location to user profile if signed in
+            if (FIREBASE_AUTH.currentUser) {
+              const userRef = doc(
+                FIREBASE_DB,
+                "users",
+                FIREBASE_AUTH.currentUser.uid
+              );
+              await updateDoc(userRef, {
+                location: {
+                  latitude,
+                  longitude,
+                  name: locationString,
+                  lastUpdated: new Date().toISOString(),
+                },
+              });
+            }
+          } catch (error) {
+            console.error("Error getting location name:", error);
+            setLocationName("Current location");
+          }
+
+          setIsLocationLoading(false);
+          setLocationError(false);
+        },
+        (error) => {
+          // Error getting location
+          console.error("Geolocation error:", error);
+          setLocationName("Location unavailable");
+          setIsLocationLoading(false);
+          setLocationError(true);
+
+          // Show error alert with option to retry
+          Alert.alert(
+            "Location Error",
+            "Unable to get your current location. Please check your location permissions.",
+            [
+              { text: "OK" },
+              { text: "Retry", onPress: () => getCurrentLocation() },
+            ]
           );
-          await updateDoc(userRef, {
-            customLocation: customLocation,
-            lastUpdated: new Date().toISOString(),
-          });
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 10000,
         }
-        setLocationName(customLocation);
-        setLocationModalVisible(false);
-      } catch (error) {
-        console.error("Error updating location:", error);
-      } finally {
-        setLocationLoading(false);
-      }
+      );
+    } else {
+      // Geolocation not supported
+      console.error("Geolocation is not supported by this browser/device");
+      setLocationName("Location unavailable");
+      setIsLocationLoading(false);
+      setLocationError(true);
+      Alert.alert(
+        "Error",
+        "Location services are not available on your device"
+      );
     }
   };
 
-  // Fetch user data and potential matches
+  // Get location on mount and load user data
   useEffect(() => {
+    getCurrentLocation();
+
     const fetchData = async () => {
       try {
         const user = FIREBASE_AUTH.currentUser;
@@ -123,9 +147,10 @@ export default function HomeScreen() {
           if (userDoc.exists() && userData) {
             setCurrentUser(userData);
 
-            // Use custom location if available
-            if (userData.customLocation) {
-              setLocationName(userData.customLocation);
+            // If user already has location saved, use it
+            if (userData.location?.name) {
+              setLocationName(userData.location.name);
+              setIsLocationLoading(false);
             }
 
             const usersCollection = collection(FIREBASE_DB, "users");
@@ -199,126 +224,34 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
+      {/* Header with location */}
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.locationButton}
-          onPress={() => setLocationModalVisible(true)}
+          onPress={getCurrentLocation}
         >
-          {locationLoading ? (
-            <ActivityIndicator size="small" color={Colors.light.primary} />
+          <Ionicons name="location" size={24} color={Colors.light.primary} />
+          {isLocationLoading ? (
+            <ActivityIndicator
+              size="small"
+              color={Colors.light.primary}
+              style={styles.locationLoader}
+            />
           ) : (
-            <>
-              <Ionicons
-                name="location"
-                size={24}
-                color={Colors.light.primary}
-              />
-              <Text style={styles.locationText} numberOfLines={1}>
-                {locationName}
-              </Text>
-            </>
+            <Text
+              style={[
+                styles.locationText,
+                locationError && styles.locationError,
+              ]}
+              numberOfLines={1}
+            >
+              {locationName}
+            </Text>
           )}
         </TouchableOpacity>
         <Text style={styles.headerTitle}>SwipeSport</Text>
         <View style={styles.placeholder} />
       </View>
-
-      {/* Location Change Modal */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={locationModalVisible}
-        onRequestClose={() => setLocationModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Set Your Location</Text>
-              <TouchableOpacity onPress={() => setLocationModalVisible(false)}>
-                <Ionicons name="close" size={24} color={Colors.light.text} />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.modalBody}>
-              <Text style={styles.currentLocationLabel}>Current Location:</Text>
-              <Text style={styles.currentLocation}>{locationName}</Text>
-
-              <Text style={styles.customLocationLabel}>
-                Enter Custom Location:
-              </Text>
-              <TextInput
-                value={customLocation}
-                onChangeText={setCustomLocation}
-                placeholder="Enter city or area"
-                style={styles.customLocationInput}
-                autoCapitalize="words"
-              />
-
-              <TouchableOpacity
-                style={styles.setLocationButton}
-                onPress={handleChangeLocation}
-                disabled={!customLocation.trim() || locationLoading}
-              >
-                {locationLoading ? (
-                  <ActivityIndicator size="small" color="#000" />
-                ) : (
-                  <Text style={styles.setLocationButtonText}>
-                    Update Location
-                  </Text>
-                )}
-              </TouchableOpacity>
-
-              {location && (
-                <TouchableOpacity
-                  style={styles.useCurrentButton}
-                  onPress={async () => {
-                    try {
-                      setLocationLoading(true);
-                      const geocode = await Location.reverseGeocodeAsync({
-                        latitude: location.coords.latitude,
-                        longitude: location.coords.longitude,
-                      });
-
-                      if (geocode && geocode.length > 0) {
-                        const address = geocode[0];
-                        const locationString =
-                          address.city || address.region || "Unknown location";
-                        setLocationName(locationString);
-
-                        // Save to user profile
-                        if (FIREBASE_AUTH.currentUser) {
-                          const userRef = doc(
-                            FIREBASE_DB,
-                            "users",
-                            FIREBASE_AUTH.currentUser.uid
-                          );
-                          await updateDoc(userRef, {
-                            customLocation: locationString,
-                            lastUpdated: new Date().toISOString(),
-                          });
-                        }
-                      }
-                      setLocationModalVisible(false);
-                    } catch (error) {
-                      console.error(
-                        "Error updating to current location:",
-                        error
-                      );
-                    } finally {
-                      setLocationLoading(false);
-                    }
-                  }}
-                >
-                  <Text style={styles.useCurrentButtonText}>
-                    Use Current Location
-                  </Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
-        </View>
-      </Modal>
 
       {/* Swiper */}
       <View style={styles.swiperContainer}>
@@ -478,8 +411,14 @@ const styles = StyleSheet.create({
     color: Colors.light.primary,
     fontSize: 14,
     fontWeight: "500",
-    marginLeft: 4,
-    maxWidth: 100,
+    marginLeft: 6,
+    maxWidth: 120,
+  },
+  locationError: {
+    color: "#EF4444",
+  },
+  locationLoader: {
+    marginLeft: 6,
   },
   headerTitle: {
     fontSize: 24,
@@ -488,86 +427,6 @@ const styles = StyleSheet.create({
   },
   placeholder: {
     width: 40,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "flex-end",
-  },
-  modalContent: {
-    backgroundColor: "white",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingVertical: 20,
-    maxHeight: "60%",
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingBottom: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E2E8F0",
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: Colors.light.text,
-  },
-  modalBody: {
-    padding: 20,
-  },
-  currentLocationLabel: {
-    fontSize: 14,
-    color: Colors.light.textSecondary,
-    marginBottom: 8,
-  },
-  currentLocation: {
-    fontSize: 16,
-    fontWeight: "500",
-    color: Colors.light.text,
-    marginBottom: 20,
-  },
-  customLocationLabel: {
-    fontSize: 14,
-    color: Colors.light.textSecondary,
-    marginBottom: 8,
-  },
-  customLocationInput: {
-    height: 50,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    fontSize: 16,
-    marginBottom: 20,
-  },
-  setLocationButton: {
-    backgroundColor: Colors.light.primary,
-    height: 50,
-    borderRadius: 8,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  setLocationButtonText: {
-    color: "#000",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  useCurrentButton: {
-    height: 50,
-    borderRadius: 8,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: Colors.light.primary,
-  },
-  useCurrentButtonText: {
-    color: Colors.light.primary,
-    fontSize: 16,
-    fontWeight: "500",
   },
   swiperContainer: {
     flex: 1,
@@ -607,7 +466,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: "50%", // Increased gradient height for more content
+    height: "50%",
     padding: 20,
     justifyContent: "flex-end",
   },
