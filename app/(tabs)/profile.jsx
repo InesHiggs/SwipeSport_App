@@ -24,7 +24,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { Colors } from "../../constants/Colors";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
-// Add sports mapping from signup.tsx
+// Add sports mapping
 const sportsMapping = {
   "⚽️": "Football",
   "🏀": "Basketball",
@@ -42,6 +42,33 @@ const sportsMapping = {
   "🚴‍♂️": "Cycling",
   "🤾‍♂️": "Handball",
   "🏋️‍♂️": "Weight Lifting",
+};
+
+// Add proficiency levels with MaterialIcons
+const proficiencyLevels = [
+  { level: "Beginner", icon: "directions-walk" },
+  { level: "Intermediate 1", icon: "directions-run" },
+  { level: "Intermediate 2", icon: "directions-bike" },
+  { level: "Advanced", icon: "fitness-center" },
+  { level: "Pro", icon: "emoji-events" },
+];
+
+// Helper function to get the icon name for the selected proficiency level
+const getProficiencyIcon = (level) => {
+  switch (level) {
+    case "Beginner":
+      return "directions-walk";
+    case "Intermediate 1":
+      return "directions-run";
+    case "Intermediate 2":
+      return "directions-bike";
+    case "Advanced":
+      return "fitness-center";
+    case "Pro":
+      return "emoji-events";
+    default:
+      return "fitness-center";
+  }
 };
 
 // Firebase profile image helper component built directly into this file
@@ -168,10 +195,13 @@ const ProfileScreen = () => {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isLocalImage, setIsLocalImage] = useState(false);
 
-  // New state variables for the sports dropdown
+  // State variables for the sports dropdown
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedSport, setSelectedSport] = useState("");
   const [selectedEmoji, setSelectedEmoji] = useState("");
+
+  // New state variable for proficiency level dropdown
+  const [proficiencyModalVisible, setProficiencyModalVisible] = useState(false);
 
   const router = useRouter();
 
@@ -308,6 +338,13 @@ const ProfileScreen = () => {
     setHasUnsavedChanges(true);
   };
 
+  // Function to handle proficiency level selection
+  const handleSelectProficiency = (level) => {
+    setProficiencyLevel(level);
+    setProficiencyModalVisible(false);
+    setHasUnsavedChanges(true);
+  };
+
   const handleUpdateProfile = async () => {
     if (!userId) {
       Alert.alert("Error", "User not authenticated");
@@ -356,6 +393,7 @@ const ProfileScreen = () => {
       const updates = {
         userAvailability: availability,
         lastUpdated: new Date().toISOString(),
+        proficiencyLevel: proficiencyLevel, // Include proficiency level in updates
       };
 
       // Add sport updates if we have a selected sport
@@ -436,14 +474,12 @@ const ProfileScreen = () => {
                     color={Colors.light.primary}
                   />
                 ) : isLocalImage ? (
-                  // Local image (newly selected, not yet uploaded)
                   <Image
                     source={{ uri: image }}
                     style={styles.profilePic}
                     resizeMode="cover"
                   />
                 ) : (
-                  // Firebase image (or default if none exists)
                   <FirebaseProfileImage
                     userId={userId}
                     style={styles.profilePic}
@@ -514,13 +550,32 @@ const ProfileScreen = () => {
                 </TouchableOpacity>
               </View>
 
+              {/* Proficiency Level - Updated to be editable */}
               <View style={styles.inputContainer}>
                 <Text style={styles.label}>Proficiency Level</Text>
-                <View style={styles.displayField}>
-                  <Text style={styles.displayText}>
-                    {proficiencyLevel || "Not provided"}
-                  </Text>
-                </View>
+                <TouchableOpacity
+                  style={styles.dropdownField}
+                  onPress={() => setProficiencyModalVisible(true)}
+                >
+                  <View style={styles.dropdownContent}>
+                    {proficiencyLevel && (
+                      <MaterialIcons
+                        name={getProficiencyIcon(proficiencyLevel)}
+                        size={20}
+                        color={Colors.light.text}
+                        style={styles.proficiencyIcon}
+                      />
+                    )}
+                    <Text style={styles.displayText}>
+                      {proficiencyLevel || "Select your level"}
+                    </Text>
+                  </View>
+                  <MaterialIcons
+                    name="arrow-drop-down"
+                    size={24}
+                    color={Colors.light.textSecondary}
+                  />
+                </TouchableOpacity>
               </View>
             </View>
 
@@ -618,6 +673,66 @@ const ProfileScreen = () => {
                     </TouchableOpacity>
                   )}
                   style={styles.sportsList}
+                />
+              </View>
+            </View>
+          </Modal>
+
+          {/* Proficiency Level Selection Modal */}
+          <Modal
+            animationType="slide"
+            transparent={true}
+            visible={proficiencyModalVisible}
+            onRequestClose={() => setProficiencyModalVisible(false)}
+          >
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalContent}>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>
+                    Select Proficiency Level
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => setProficiencyModalVisible(false)}
+                  >
+                    <MaterialIcons
+                      name="close"
+                      size={24}
+                      color={Colors.light.text}
+                    />
+                  </TouchableOpacity>
+                </View>
+
+                <FlatList
+                  data={proficiencyLevels}
+                  keyExtractor={(item) => item.level}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity
+                      style={[
+                        styles.proficiencyItem,
+                        proficiencyLevel === item.level &&
+                          styles.selectedProficiencyItem,
+                      ]}
+                      onPress={() => handleSelectProficiency(item.level)}
+                    >
+                      <MaterialIcons
+                        name={item.icon}
+                        size={24}
+                        color={Colors.light.text}
+                        style={styles.proficiencyItemIcon}
+                      />
+                      <Text style={styles.proficiencyItemText}>
+                        {item.level}
+                      </Text>
+                      {proficiencyLevel === item.level && (
+                        <MaterialIcons
+                          name="check"
+                          size={20}
+                          color={Colors.light.primary}
+                        />
+                      )}
+                    </TouchableOpacity>
+                  )}
+                  style={styles.proficiencyList}
                 />
               </View>
             </View>
@@ -827,7 +942,7 @@ const styles = StyleSheet.create({
     color: Colors.light.primary,
     fontWeight: "500",
   },
-  // Add new styles for the dropdown and modal
+  // Styles for the dropdown and modal
   dropdownField: {
     height: 48,
     borderWidth: 1,
@@ -845,6 +960,9 @@ const styles = StyleSheet.create({
   },
   emojiText: {
     fontSize: 20,
+    marginRight: 8,
+  },
+  proficiencyIcon: {
     marginRight: 8,
   },
   modalOverlay: {
@@ -891,6 +1009,28 @@ const styles = StyleSheet.create({
     marginRight: 15,
   },
   sportItemText: {
+    fontSize: 16,
+    flex: 1,
+    color: Colors.light.text,
+  },
+  // New styles for proficiency level dropdown
+  proficiencyList: {
+    marginTop: 10,
+  },
+  proficiencyItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 15,
+    borderBottomWidth: 0.5,
+    borderBottomColor: "#E2E8F0",
+  },
+  selectedProficiencyItem: {
+    backgroundColor: "rgba(167, 223, 48, 0.1)",
+  },
+  proficiencyItemIcon: {
+    marginRight: 15,
+  },
+  proficiencyItemText: {
     fontSize: 16,
     flex: 1,
     color: Colors.light.text,
