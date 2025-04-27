@@ -106,7 +106,7 @@ export default function SignUpPreference() {
         sport: sport ? String(sport) : null,
         sportName: sportName ? String(sportName) : null,
         proficiencyLevel: selectedLevel,
-        levelPreference: [selectedLevel], // Add this line to save preferences
+        levelPreference: [selectedLevel], // Add this line!
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         uid: userCredential.user.uid,
