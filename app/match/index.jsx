@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity, Dimensions, StatusBar } from 'react-native';
 import { AppStyles } from '@/constants/AppStyles';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
 import MaterialButton from '@/components/MaterialButton';
+import BackgroundImage from '@/components/BackgroundImage';
 
-// Get screen height
+// Get screen dimensions
 const screenHeight = Dimensions.get('window').height;
+const screenWidth = Dimensions.get('window').width;
 
 // Hardcoded list of people
 const people = [
@@ -28,8 +30,14 @@ const PeopleListPage = () => {
   };
 
   return (
-    <ThemedView useMaterialBackground style={styles.container}>
-      {/* Image takes up 70% of the screen */}
+    <View style={styles.container}>
+      {/* Status bar transparent */}
+      <StatusBar translucent backgroundColor="transparent" />
+      
+      {/* Background Image */}
+      <BackgroundImage style={{ opacity: 0.15 }} />
+      
+      {/* Image takes up full height available since no header */}
       <Image source={currentPerson.image} style={styles.personImage} />
 
       {/* Info section now directly below the image */}
@@ -54,7 +62,7 @@ const PeopleListPage = () => {
           color={AppStyles.Colors.primary}
         />
       </View>
-    </ThemedView>
+    </View>
   );
 };
 
@@ -65,7 +73,7 @@ const styles = StyleSheet.create({
   },
   personImage: {
     width: '100%',
-    height: screenHeight * 0.7, // 70% of screen height
+    height: screenHeight * 0.75, // Increased to 75% since no header
     resizeMode: 'cover',
   },
   infoContainer: {
@@ -89,6 +97,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     width: '100%',
     marginTop: AppStyles.Spacing.l,
+    paddingHorizontal: AppStyles.Spacing.l,
   },
   button: {
     width: '45%',

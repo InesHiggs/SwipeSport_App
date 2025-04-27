@@ -9,6 +9,7 @@ import MaterialTextInput from '@/components/MaterialTextInput';
 import MaterialButton from '@/components/MaterialButton';
 import { AppStyles } from '@/constants/AppStyles';
 import SvgLogo from '@/components/SvgLogo';
+import BackgroundImage from '@/components/BackgroundImage';
 
 const Login = () => {
     const [email, setEmail] = useState('');
@@ -44,11 +45,7 @@ const Login = () => {
   return (
     <ThemedView useMaterialBackground style={styles.container}>
       {/* Background image with increased opacity */}
-      <Image 
-        source={require('../../assets/images/bg.png')} 
-        style={styles.backgroundImage} 
-        resizeMode="cover"
-      />
+      <BackgroundImage style={{ opacity: 0.3 }} />
       
       <ScrollView 
         contentContainerStyle={styles.scrollContent}
@@ -182,11 +179,6 @@ export default Login;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  backgroundImage: {
-    ...StyleSheet.absoluteFillObject,
-    opacity: 0.3, // More pronounced background
-    zIndex: -1,
   },
   scrollContent: {
     flexGrow: 1,

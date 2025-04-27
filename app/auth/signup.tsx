@@ -10,6 +10,7 @@ import MaterialTextInput from '@/components/MaterialTextInput';
 import MaterialButton from '@/components/MaterialButton';
 import { AppStyles } from '@/constants/AppStyles';
 import SvgLogo from '@/components/SvgLogo';
+import BackgroundImage from '@/components/BackgroundImage';
 
 export default function SignUp() {
   const router = useRouter();
@@ -68,11 +69,7 @@ export default function SignUp() {
   return (
     <ThemedView useMaterialBackground style={styles.container}>
       {/* Background image with increased opacity */}
-      <Image 
-        source={require('../../assets/images/bg.png')} 
-        style={styles.backgroundImage} 
-        resizeMode="cover"
-      />
+      <BackgroundImage style={{ opacity: 0.3 }} />
       
       <View style={styles.logoContainer}>
         <SvgLogo width={150} height={60} />
@@ -182,11 +179,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     padding: AppStyles.Spacing.m,
-  },
-  backgroundImage: {
-    ...StyleSheet.absoluteFillObject,
-    opacity: 0.3,
-    zIndex: -1,
   },
   logoContainer: {
     alignItems: 'center',
