@@ -1,6 +1,6 @@
-import { View, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, Alert } from 'react-native';
-import React, { useState } from 'react';
-import { useRouter } from "expo-router";
+import { View, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, Alert, Image } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { FIREBASE_AUTH, FIRESTORE_DB } from '@/FirebaseConfig';
 import { collection, doc, setDoc } from "firebase/firestore";
@@ -9,9 +9,11 @@ import { ThemedText } from '@/components/ThemedText';
 import MaterialTextInput from '@/components/MaterialTextInput';
 import MaterialButton from '@/components/MaterialButton';
 import { AppStyles } from '@/constants/AppStyles';
+import SvgLogo from '@/components/SvgLogo';
 
 export default function SignUp() {
   const router = useRouter();
+  const params = useLocalSearchParams();
   const [loading, setLoading] = useState(false);
 
   // User state variables
@@ -21,6 +23,13 @@ export default function SignUp() {
   const [age, setAge] = useState("");
   const [gender, setGender] = useState("");
   const [level, setLevel] = useState("");
+  
+  // Get email from params if available
+  useEffect(() => {
+    if (params.email) {
+      setEmail(params.email as string);
+    }
+  }, [params]);
 
   // Handle sign-up and store user in Firestore
   const handleSignUp = async () => {
@@ -58,10 +67,16 @@ export default function SignUp() {
 
   return (
     <ThemedView useMaterialBackground style={styles.container}>
-      {/* Background blurbs */}
-      <View style={styles.backgroundBlurbs}>
-        <View style={styles.largeBlurb} />
-        <View style={styles.smallBlurb} />
+      {/* Background image with increased opacity */}
+      <Image 
+        source={require('../../assets/images/bg.png')} 
+        style={styles.backgroundImage} 
+        resizeMode="cover"
+      />
+      
+      <View style={styles.logoContainer}>
+        <SvgLogo width={150} height={60} />
+        <ThemedText style={styles.tagline}>Find. Match. Play.</ThemedText>
       </View>
       
       <KeyboardAvoidingView 
@@ -143,6 +158,7 @@ export default function SignUp() {
               title="Create Account" 
               onPress={handleSignUp}
               variant="filled"
+              color={AppStyles.Colors.primary}
               fullWidth
               style={styles.button}
             />
@@ -150,7 +166,7 @@ export default function SignUp() {
             <MaterialButton 
               title="Back to Login" 
               onPress={() => router.back()}
-              variant="outlined"
+              variant="text"
               fullWidth
               style={styles.button}
             />
@@ -167,29 +183,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: AppStyles.Spacing.m,
   },
-  backgroundBlurbs: {
+  backgroundImage: {
     ...StyleSheet.absoluteFillObject,
+    opacity: 0.3,
     zIndex: -1,
   },
-  largeBlurb: {
-    position: 'absolute',
-    width: 300,
-    height: 300,
-    borderRadius: 150,
-    backgroundColor: AppStyles.Colors.primaryLight,
-    opacity: 0.3,
-    top: '5%',
-    right: -100,
+  logoContainer: {
+    alignItems: 'center',
+    marginTop: AppStyles.Spacing.xl,
   },
-  smallBlurb: {
-    position: 'absolute',
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: AppStyles.Colors.primary,
-    opacity: 0.2,
-    bottom: '5%',
-    left: -50,
+  tagline: {
+    textAlign: 'center',
+    fontSize: 16,
+    opacity: 0.5,
+    marginTop: AppStyles.Spacing.xs,
   },
   title: {
     textAlign: 'center',
@@ -198,6 +205,7 @@ const styles = StyleSheet.create({
   formContainer: {
     width: '100%',
     alignItems: 'center',
+    marginTop: AppStyles.Spacing.xl,
   },
   inputContainer: {
     marginBottom: AppStyles.Spacing.s,

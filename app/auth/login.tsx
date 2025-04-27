@@ -1,4 +1,4 @@
-import { View, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, Image } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, Image, Dimensions, ScrollView } from 'react-native';
 import React, { useState } from 'react';
 import { FIREBASE_AUTH } from '@/FirebaseConfig';
 import { signInWithEmailAndPassword } from 'firebase/auth'; 
@@ -8,20 +8,23 @@ import { ThemedText } from '@/components/ThemedText';
 import MaterialTextInput from '@/components/MaterialTextInput';
 import MaterialButton from '@/components/MaterialButton';
 import { AppStyles } from '@/constants/AppStyles';
+import SvgLogo from '@/components/SvgLogo';
 
 const Login = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [isPasswordVisible, setIsPasswordVisible] = useState(false);
     const auth = FIREBASE_AUTH;
     const router = useRouter();
+    const screenWidth = Dimensions.get('window').width;
     
     const signIn = async() => {
         setLoading(true);
         try{
             const response = await signInWithEmailAndPassword(auth, email, password);
             console.log("Login Successful", response);
-            alert('Login successful!')
             router.replace("/");
         } catch(error: any) {
             console.log(error);
@@ -30,72 +33,146 @@ const Login = () => {
             setLoading(false);
         }
     }
+    
+    const goToRegister = () => {
+        router.push({
+            pathname: '/auth/signup',
+            params: { email: email }
+        });
+    }
 
   return (
     <ThemedView useMaterialBackground style={styles.container}>
-      {/* Background image */}
+      {/* Background image with increased opacity */}
       <Image 
-        source={require('@/assets/images/bg.png')} 
+        source={require('../../assets/images/bg.png')} 
         style={styles.backgroundImage} 
         resizeMode="cover"
       />
       
-      <ThemedText useMaterialStyle type="headlineLarge" style={styles.title}>
-        SwipeSport
-      </ThemedText>
-      
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.formContainer}
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent}
+        bounces={false}
+        showsVerticalScrollIndicator={false}
       >
-        <MaterialTextInput
-          label="Email"
-          value={email}
-          onChangeText={(text: string) => setEmail(text)}
-          placeholder="Enter your email"
-          keyboardType="email-address"
-          autoCapitalize="none"
-          fullWidth
-          containerStyle={styles.inputContainer}
-        />
-        
-        <MaterialTextInput
-          label="Password"
-          value={password}
-          onChangeText={(text: string) => setPassword(text)}
-          placeholder="Enter your password"
-          secure
-          autoCapitalize="none"
-          fullWidth
-          containerStyle={styles.inputContainer}
-        />
-        
-        {loading ? (
-          <ActivityIndicator 
-            size="large" 
-            color={AppStyles.Colors.primary}
-            style={styles.loader}
-          />
-        ) : (
-          <View style={styles.buttonContainer}>
-            <MaterialButton 
-              title="Login" 
-              onPress={signIn}
-              variant="filled"
-              fullWidth
-              style={styles.button}
-            />
-            
-            <MaterialButton 
-              title="Create Account" 
-              onPress={() => router.push('/auth/signup')}
-              variant="outlined"
-              fullWidth
-              style={styles.button}
+        <View style={styles.contentContainer}>
+          {/* Header section - Give full priority */}
+          <View style={styles.logoContainer}>
+            <SvgLogo width={screenWidth * 0.7} height={80} style={styles.logo} />
+            <ThemedText style={styles.tagline}>Find. Match. Play.</ThemedText>
+          </View>
+          
+          {/* Image section - Scale in remaining space */}
+          <View style={styles.imageContainer}>
+            <Image 
+              source={require('../../assets/images/sport-list.png')} 
+              style={styles.centerImage}
+              resizeMode="contain"
+              resizeMethod="resize"
             />
           </View>
-        )}
-      </KeyboardAvoidingView>
+          
+          {/* Form section - Always maintain proper size */}
+          <KeyboardAvoidingView 
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={styles.formContainer}
+          >
+            {!showPassword ? (
+              <>
+                <MaterialTextInput
+                  label="Email"
+                  value={email}
+                  onChangeText={(text: string) => setEmail(text)}
+                  placeholder="Enter your email"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  fullWidth={screenWidth < 500} // Only full width on smaller screens
+                  containerStyle={[
+                    styles.inputContainer,
+                    screenWidth >= 500 && { width: '80%' }
+                  ]}
+                />
+                
+                {loading ? (
+                  <ActivityIndicator 
+                    size="large" 
+                    color={AppStyles.Colors.primary}
+                    style={styles.loader}
+                  />
+                ) : (
+                  <View style={styles.buttonContainer}>
+                    <View style={styles.buttonWrapper}>
+                      <MaterialButton 
+                        title="Next" 
+                        onPress={() => setShowPassword(true)}
+                        variant="filled"
+                        color={AppStyles.Colors.primary}
+                        style={styles.button}
+                      />
+                    </View>
+                    
+                    <View style={styles.buttonWrapper}>
+                      <MaterialButton 
+                        title="Register" 
+                        onPress={goToRegister}
+                        variant="text"
+                        style={styles.button}
+                      />
+                    </View>
+                  </View>
+                )}
+              </>
+            ) : (
+              <>
+                <MaterialTextInput
+                  label="Password"
+                  value={password}
+                  onChangeText={(text: string) => setPassword(text)}
+                  placeholder="Enter your password"
+                  secure={true}
+                  secureTextEntry={!isPasswordVisible}
+                  autoCapitalize="none"
+                  fullWidth={screenWidth < 500} // Only full width on smaller screens
+                  containerStyle={[
+                    styles.inputContainer,
+                    screenWidth >= 500 && { width: '80%' }
+                  ]}
+                  trailingAction={() => setIsPasswordVisible(!isPasswordVisible)}
+                />
+                
+                {loading ? (
+                  <ActivityIndicator 
+                    size="large" 
+                    color={AppStyles.Colors.primary}
+                    style={styles.loader}
+                  />
+                ) : (
+                  <View style={styles.buttonContainer}>
+                    <View style={styles.buttonWrapper}>
+                      <MaterialButton 
+                        title="Login" 
+                        onPress={signIn}
+                        variant="filled"
+                        color={AppStyles.Colors.primary}
+                        style={styles.button}
+                      />
+                    </View>
+                    
+                    <View style={styles.buttonWrapper}>
+                      <MaterialButton 
+                        title="Back" 
+                        onPress={() => setShowPassword(false)}
+                        variant="text"
+                        style={styles.button}
+                      />
+                    </View>
+                  </View>
+                )}
+              </>
+            )}
+          </KeyboardAvoidingView>
+        </View>
+      </ScrollView>
     </ThemedView>
   );
 }; 
@@ -105,34 +182,72 @@ export default Login;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    padding: AppStyles.Spacing.l,
   },
   backgroundImage: {
     ...StyleSheet.absoluteFillObject,
-    opacity: 0.15,
+    opacity: 0.3, // More pronounced background
     zIndex: -1,
   },
-  title: {
+  scrollContent: {
+    flexGrow: 1,
+    padding: AppStyles.Spacing.l,
+  },
+  contentContainer: {
+    flex: 1,
+    justifyContent: 'space-between',
+    minHeight: '100%',
+  },
+  logoContainer: {
+    alignItems: 'center',
+    marginTop: AppStyles.Spacing.xl,
+    marginBottom: AppStyles.Spacing.m,
+  },
+  logo: {
+    marginBottom: AppStyles.Spacing.s,
+  },
+  tagline: {
     textAlign: 'center',
-    marginBottom: AppStyles.Spacing.xxl,
+    fontSize: 16,
+    opacity: 0.5, // 50% opacity as requested
+    marginTop: AppStyles.Spacing.xs,
+  },
+  imageContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: AppStyles.Spacing.s,
+    minHeight: 100, // Minimum height for the image container
+    maxHeight: '50%', // Maximum height to maintain priorities
+  },
+  centerImage: {
+    width: '80%',
+    height: '100%',
+    maxHeight: '100%',
   },
   formContainer: {
     width: '100%',
     alignItems: 'center',
+    marginTop: AppStyles.Spacing.m, // Reduced from l to m
+    marginBottom: AppStyles.Spacing.l, // Reduced from xl to l
   },
   inputContainer: {
     marginBottom: AppStyles.Spacing.m,
+    width: '100%',
   },
   loader: {
-    marginTop: AppStyles.Spacing.xl,
+    marginTop: AppStyles.Spacing.l, // Reduced from xl
   },
   buttonContainer: {
     width: '100%',
     alignItems: 'center',
-    marginTop: AppStyles.Spacing.l,
+    marginTop: AppStyles.Spacing.m, // Reduced from l to m
+  },
+  buttonWrapper: {
+    width: '80%', // Control width of the button container
+    alignItems: 'center',
   },
   button: {
-    marginVertical: AppStyles.Spacing.s,
+    marginVertical: AppStyles.Spacing.xs, // Reduced from s to xs
+    minWidth: '100%', // Take full width of its container
   },
-})
+});

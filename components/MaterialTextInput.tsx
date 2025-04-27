@@ -58,7 +58,13 @@ const MaterialTextInput: React.FC<MaterialTextInputProps> = ({
   ...rest
 }) => {
   const [isFocused, setIsFocused] = useState(false);
+  // Always start with secure text entry if secure prop is true
   const [secureTextEntry, setSecureTextEntry] = useState(secure);
+
+  // Update secureTextEntry if secure prop changes
+  React.useEffect(() => {
+    setSecureTextEntry(secure);
+  }, [secure]);
 
   // Determine border color based on state
   const getBorderColor = () => {
@@ -69,7 +75,11 @@ const MaterialTextInput: React.FC<MaterialTextInputProps> = ({
 
   // Toggle password visibility
   const toggleSecureEntry = () => {
-    setSecureTextEntry(!secureTextEntry);
+    if (secure) {
+      setSecureTextEntry(!secureTextEntry);
+    } else if (trailingAction) {
+      trailingAction();
+    }
   };
 
   return (
