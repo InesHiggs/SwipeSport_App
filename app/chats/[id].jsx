@@ -114,30 +114,30 @@ const ChatPage = () => {
   };
 
   return (
-    <KeyboardAvoidingView
+      <KeyboardAvoidingView
       style={{ flex: 1 }}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={130}
+      behavior={Platform.OS === 'ios' ? 'padding' : null}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 65 : 0}
     >
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <ThemedView useMaterialBackground style={styles.container}>
-          {/* Background image */}
-          <Image 
-            source={require('@/assets/images/bg.png')} 
-            style={styles.backgroundImage} 
-            resizeMode="cover"
-          />
-          
-          <View style={styles.header}>
-            <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-              <Ionicons name="arrow-back" size={24} color={AppStyles.Colors.primary} />
-            </TouchableOpacity>
-            <ThemedText useMaterialStyle type="titleMedium" style={styles.headerTitle}>
-              {otherUserName}
-            </ThemedText>
-            <View style={styles.headerRight} />
-          </View>
+      <ThemedView useMaterialBackground style={styles.container}>
+        {/* Background image */}
+        <Image 
+          source={require('@/assets/images/bg.png')} 
+          style={styles.backgroundImage} 
+          resizeMode="cover"
+        />
+        
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={24} color={AppStyles.Colors.primary} />
+          </TouchableOpacity>
+          <ThemedText useMaterialStyle type="titleMedium" style={styles.headerTitle}>
+            {otherUserName}
+          </ThemedText>
+          <View style={styles.headerRight} />
+        </View>
 
+        <View style={styles.chatContentContainer}>
           <FlatList
             data={messages}
             keyExtractor={(item) => item.id.toString()}
@@ -145,23 +145,31 @@ const ChatPage = () => {
               currentUser ? <MessageBubble message={item} currentUserId={currentUser.uid} /> : null
             )}
             contentContainerStyle={styles.messagesList}
+            showsVerticalScrollIndicator={false}
           />
+        </View>
 
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={styles.input}
-              value={input}
-              onChangeText={setInput}
-              placeholder="Type a message..."
-              returnKeyType="send"
-              onSubmitEditing={sendMessage}
-            />
-            <TouchableOpacity style={styles.sendButton} onPress={sendMessage}>
-              <Ionicons name="send" size={24} color={AppStyles.Colors.onPrimary} />
-            </TouchableOpacity>
-          </View>
-        </ThemedView>
-      </TouchableWithoutFeedback>
+        <View style={styles.inputOuterContainer}>
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={styles.input}
+                value={input}
+                onChangeText={setInput}
+                placeholder="Type a message..."
+                returnKeyType="send"
+                onSubmitEditing={sendMessage}
+                multiline={true}
+                numberOfLines={Platform.OS === 'ios' ? null : 1}
+                maxHeight={100}
+              />
+              <TouchableOpacity style={styles.sendButton} onPress={sendMessage}>
+                <Ionicons name="send" size={24} color={AppStyles.Colors.onPrimary} />
+              </TouchableOpacity>
+            </View>
+          </TouchableWithoutFeedback>
+        </View>
+      </ThemedView>
     </KeyboardAvoidingView>
   );
 };
@@ -169,6 +177,7 @@ const ChatPage = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    position: 'relative',
   },
   backgroundImage: {
     ...StyleSheet.absoluteFillObject,
@@ -197,30 +206,57 @@ const styles = StyleSheet.create({
   headerRight: {
     width: 40,
   },
+  chatContentContainer: {
+    flex: 1,
+    marginBottom: Platform.OS === 'ios' ? 70 : 60, // Reduced space to move chatbox up
+  },
   messagesList: {
     padding: AppStyles.Spacing.m,
+    paddingBottom: 180, // Reduced padding to ensure proper spacing
+  },
+  inputOuterContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingBottom: Platform.OS === 'ios' ? 10 : 0, // Reduced padding to move up
+    backgroundColor: 'transparent',
+    zIndex: 2, // Ensure input stays on top
   },
   inputContainer: {
     flexDirection: 'row',
-    padding: AppStyles.Spacing.s,
+    padding: Platform.OS === 'ios' ? AppStyles.Spacing.m : AppStyles.Spacing.s, // Platform-specific padding
     borderTopWidth: 1,
     borderTopColor: AppStyles.Colors.divider,
     alignItems: 'center',
+    backgroundColor: AppStyles.Colors.surface,
+    ...Platform.select({
+      android: {
+        elevation: 4,
+      },
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
+      }
+    }),
   },
   input: {
     flex: 1,
     fontSize: AppStyles.Typography.bodyText.bodyLarge.fontSize,
-    paddingVertical: AppStyles.Spacing.xs,
+    paddingVertical: AppStyles.Spacing.s, // Increased vertical padding for height
     paddingHorizontal: AppStyles.Spacing.m,
     backgroundColor: AppStyles.Colors.surfaceVariant,
     borderRadius: AppStyles.BorderRadius.full,
     marginRight: AppStyles.Spacing.s,
+    minHeight: Platform.OS === 'ios' ? 36 : 40, // Platform-specific height
   },
   sendButton: {
-    width: 40,
-    height: 40,
+    width: Platform.OS === 'ios' ? 38 : 42,
+    height: Platform.OS === 'ios' ? 38 : 42,
     backgroundColor: AppStyles.Colors.primary,
-    borderRadius: 20,
+    borderRadius: Platform.OS === 'ios' ? 19 : 21,
     justifyContent: 'center',
     alignItems: 'center',
     ...AppStyles.Shadows.small,
