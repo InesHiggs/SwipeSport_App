@@ -8,6 +8,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ImageBackground,
+  ScrollView,
 } from "react-native";
 import { Button, Menu, Provider, TextInput } from "react-native-paper";
 import * as ImagePicker from "expo-image-picker";
@@ -171,7 +172,12 @@ const ProfileScreen = () => {
         imageStyle={{ opacity: 0.15 }}
       >
         <Provider>
-          <View style={styles.profileContainer}>
+          <ScrollView 
+            style={styles.scrollContainer}
+            contentContainerStyle={styles.scrollContentContainer}
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.profileContainer}>
             {/* Profile Picture */}
             <View style={styles.profilePicWrapper}>
               <Image
@@ -199,6 +205,8 @@ const ProfileScreen = () => {
               mode="outlined"
               outlineColor="#c4a8ff"
               activeOutlineColor="#7e22ce"
+              dense={true}
+              height={Platform.OS === 'ios' ? 50 : 56}
             />
 
             {/* Gender Dropdown */}
@@ -286,6 +294,7 @@ const ProfileScreen = () => {
               Log Out
             </Button>
           </View>
+          </ScrollView>
         </Provider>
       </ImageBackground>
     </KeyboardAvoidingView>
@@ -295,8 +304,13 @@ const ProfileScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  scrollContainer: {
+    flex: 1,
+  },
+  scrollContentContainer: {
     padding: 20,
-    justifyContent: "center",
+    paddingBottom: Platform.OS === 'ios' ? 120 : 80, // Add extra padding at the bottom for scrolling
   },
   profileContainer: {
     alignItems: "center",
@@ -323,6 +337,9 @@ const styles = StyleSheet.create({
   input: {
     marginBottom: 15,
     backgroundColor: "#d8b4fe",
+    width: '100%',
+    height: Platform.OS === 'ios' ? 50 : 56,
+    maxHeight: 56,
   },
   dropdownContainer: {
     position: "relative",
