@@ -128,7 +128,7 @@ export default function MeetScreen() {
       position.setValue({ x: 0, y: 0 });
 
       if (direction === 'right' && swipedProfile) {
-        // Use the correct type-safe navigation method
+        // When a user is liked, open chat directly with that person
         router.push({
           pathname: "/chats/[id]",
           params: { id: swipedProfile.uid, type: 'new' }
@@ -159,9 +159,12 @@ export default function MeetScreen() {
                 return { ...data, id: doc.id };
               })
               .filter(match => {
+                // If user has no level preferences, show all profiles
+                // Otherwise filter by level preference
                 return match.uid !== user.uid && 
-                  userData.levelPreference && 
-                  userData.levelPreference.includes(match.level);
+                  (!userData.levelPreference || 
+                   userData.levelPreference.length === 0 || 
+                   userData.levelPreference.includes(match.level));
               })
               .sort((a, b) => {
                 return daysInCommon(userData.availability || [], b.availability || []) - 
