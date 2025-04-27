@@ -30,18 +30,16 @@ const HomeScreen = () => {
         style={styles.overlay}
       >
         <View style={styles.container}>
-          <Text style={styles.title}>Welcome to Swipesort!</Text>
-
+          <Text style={styles.title}>Welcome to SwipeSport!</Text>
+          <Text style={styles.subtitle}>Find your next sport partner</Text>
+          
           <View style={styles.buttonContainer}>
-            <CustomButton text="Profile" onPress={() => router.push('/profile')} />
             <CustomButton 
               text="Find Partners" 
               onPress={() => router.push('/meet')} 
               style={styles.highlightButton} 
               textStyle={styles.highlightButtonText} 
             />
-            <CustomButton text="Accepted" onPress={() => router.push('/accepted_people')} />
-            <CustomButton text="Chats" onPress={() => router.push('/chats')} />
             <CustomButton text="Log out" onPress={handleSignOut} />
           </View>
         </View>
@@ -77,6 +75,14 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 30,
     fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 10,
+    textShadowColor: 'rgba(0,0,0,0.4)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
+  },
+  subtitle: {
+    fontSize: 18,
     color: '#fff',
     marginBottom: 30,
     textShadowColor: 'rgba(0,0,0,0.4)',

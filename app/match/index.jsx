@@ -1,5 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, Dimensions } from 'react-native';
+import { AppStyles } from '@/constants/AppStyles';
+import { ThemedView } from '@/components/ThemedView';
+import { ThemedText } from '@/components/ThemedText';
+import MaterialButton from '@/components/MaterialButton';
 
 // Get screen height
 const screenHeight = Dimensions.get('window').height;
@@ -24,27 +28,33 @@ const PeopleListPage = () => {
   };
 
   return (
-    <View style={styles.container}>
+    <ThemedView useMaterialBackground style={styles.container}>
       {/* Image takes up 70% of the screen */}
       <Image source={currentPerson.image} style={styles.personImage} />
 
       {/* Info section now directly below the image */}
-      <View style={styles.infoContainer}>
-        <Text style={styles.name}>{currentPerson.name}</Text>
-        <Text style={styles.details}>Level: {currentPerson.level} | Age: {currentPerson.age}</Text>
-      </View>
+      <ThemedView useMaterialBackground style={styles.infoContainer}>
+        <ThemedText useMaterialStyle type="titleLarge" style={styles.name}>{currentPerson.name}</ThemedText>
+        <ThemedText useMaterialStyle type="bodyMedium" style={styles.details}>Level: {currentPerson.level} | Age: {currentPerson.age}</ThemedText>
+      </ThemedView>
 
       {/* Buttons Section */}
       <View style={styles.buttonContainer}>
-        <TouchableOpacity style={[styles.button, styles.denyButton]} onPress={() => handleAction('Denied')}>
-          <Text style={styles.buttonText}>Deny</Text>
-        </TouchableOpacity>
+        <MaterialButton 
+          title="Deny"
+          onPress={() => handleAction('Denied')}
+          style={styles.button}
+          color={AppStyles.Colors.error}
+        />
 
-        <TouchableOpacity style={[styles.button, styles.acceptButton]} onPress={() => handleAction('Accepted')}>
-          <Text style={styles.buttonText}>Accept</Text>
-        </TouchableOpacity>
+        <MaterialButton 
+          title="Accept" 
+          onPress={() => handleAction('Accepted')} 
+          style={styles.button}
+          color={AppStyles.Colors.primary}
+        />
       </View>
-    </View>
+    </ThemedView>
   );
 };
 
@@ -52,7 +62,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     alignItems: 'center',
-    backgroundColor: '#fff',
   },
   personImage: {
     width: '100%',
@@ -61,45 +70,28 @@ const styles = StyleSheet.create({
   },
   infoContainer: {
     width: '90%',
-    paddingVertical: 15,
+    paddingVertical: AppStyles.Spacing.m,
     alignItems: 'center',
-    backgroundColor: '#f8f8f8',
-    borderRadius: 10,
-    marginTop: 10, // Space between image and info section
+    backgroundColor: AppStyles.Colors.surfaceVariant,
+    borderRadius: AppStyles.BorderRadius.m,
+    marginTop: AppStyles.Spacing.s,
+    ...AppStyles.Shadows.small,
   },
   name: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#333',
+    color: AppStyles.Colors.onSurface,
   },
   details: {
-    fontSize: 18,
-    color: '#666',
-    marginTop: 5,
+    color: AppStyles.Colors.onSurfaceVariant,
+    marginTop: AppStyles.Spacing.xs,
   },
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     width: '100%',
-    marginTop: 20,
+    marginTop: AppStyles.Spacing.l,
   },
   button: {
-    paddingVertical: 15,
-    paddingHorizontal: 30,
-    borderRadius: 10,
     width: '45%',
-    alignItems: 'center',
-  },
-  acceptButton: {
-    backgroundColor: '#28a745',
-  },
-  denyButton: {
-    backgroundColor: '#dc3545',
-  },
-  buttonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 18,
   },
 });
 

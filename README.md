@@ -1,6 +1,6 @@
-# Welcome to your Expo app 👋
+# Welcome to SwipeSport App 👋
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A React Native Expo app for finding sports partners and connecting with them.
 
 ## Get started
 
@@ -16,14 +16,30 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
     npx expo start
    ```
 
-In the output, you'll find options to open the app in a
+## App Structure
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+### Navigation
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+The app uses a bottom tab navigation system implemented with a custom Navbar component that provides consistent navigation across all screens. The navigation is implemented in the root layout (`app/_layout.jsx`) and includes:
+
+- **Home**: Main landing page
+- **Find**: Find sports partners with a swipe interface
+- **Chats**: Message with matched partners
+- **People**: View and manage accepted connections
+- **Profile**: User profile management
+
+The navigation bar appears on all authenticated screens and is fixed at the bottom of the screen. It visually indicates the active tab with a colored icon and top border.
+
+### Documentation
+
+Detailed documentation is available in the `docs` directory:
+- `Components.md`: Details of all reusable components
+- `Pages.md`: Information about all screens in the app
+- `Context.md`: Context providers and state management
+
+### Authentication
+
+The app uses Firebase Authentication for user management, including login and signup functionality.
 
 ## Get a fresh project
 

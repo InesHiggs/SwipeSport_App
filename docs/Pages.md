@@ -2,22 +2,33 @@
 
 This document describes all the main screens in the SwipeSport App.
 
+## Navigation Structure
+
+The app uses a custom bottom tab Navbar component in the root layout that provides consistent navigation across all screens.
+
+**Main Navigation Tabs:**
+- Home: Main landing page at `/`
+- Find: Find partners screen at `/meet`
+- Chats: Messaging interface at `/chats`
+- People: Accepted connections at `/accepted_people`
+- Profile: User profile at `/profile`
+
+The navigation bar is implemented as a fixed bottom tab bar that appears on all authenticated screens.
+
 ## Home Screen
 
 **Path:** `/app/index.jsx`
 
-The main landing page after authentication, displaying the primary navigation options.
+The main landing page after authentication.
 
 **Implementation:**
-- Renders a welcome screen with button navigation to different sections of the app
-- Background image with gradient overlay for visual appeal
-- Contains buttons for Profile, Find Partners, Accepted People, Chats, and Logout
+- Renders a welcome screen with background image
+- Gradient overlay for visual appeal
+- Contains primary call-to-action button for "Find Partners"
+- Includes logout functionality
 
 **Navigation Options:**
-- Profile: Routes to `/profile`
 - Find Partners: Routes to `/meet`
-- Accepted: Routes to `/accepted_people`
-- Chats: Routes to `/chats`
 - Log out: Signs out the user and redirects to `/auth/login`
 
 ## Authentication Screens

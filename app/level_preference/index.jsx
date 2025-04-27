@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, ImageBackground } from "react-native";
-import { Button } from "react-native-paper";
+import { View, StyleSheet, Image } from "react-native";
 import { useRouter } from "expo-router";
 import { FIREBASE_AUTH, FIRESTORE_DB } from "@/FirebaseConfig";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { MaterialIcons } from "@expo/vector-icons";
 import { ThemedView } from "@/components/ThemedView";
 import { ThemedText } from "@/components/ThemedText";
+import MaterialButton from "@/components/MaterialButton";
+import { AppStyles } from "@/constants/AppStyles";
 
 const LevelPreferencePage = () => {
   const [selectedLevels, setSelectedLevels] = useState([]);
@@ -77,133 +78,105 @@ const LevelPreferencePage = () => {
   };
 
   return (
-    <ImageBackground
-      source={require("@/assets/images/background.png")}
-      style={styles.backgroundImage}
-    >
-      <ThemedView style={styles.container}>
-        <View style={styles.headerContainer}>
-          <MaterialIcons name="sports-tennis" size={40} color="#863f9c" />
-          <ThemedText type="title" style={styles.title}>Level Preferences</ThemedText>
-          <ThemedText style={styles.subtitle}>
-            Select all skill levels you're willing to play with
-          </ThemedText>
-        </View>
+    <ThemedView useMaterialBackground style={styles.container}>
+      {/* Background image */}
+      <Image 
+        source={require('@/assets/images/bg.png')} 
+        style={styles.backgroundImage} 
+        resizeMode="cover"
+      />
 
-        <View style={styles.buttonContainer}>
-          {skillLevels.map((level) => (
-            <Button
-              key={level}
-              mode="outlined"
-              onPress={() => handleLevelSelection(level)}
-              style={[
-                styles.levelButton,
-                selectedLevels.includes(level) && styles.selectedButton,
-              ]}
-              labelStyle={[
-                styles.buttonLabel,
-                selectedLevels.includes(level) && styles.selectedButtonLabel,
-              ]}
-            >
-              {level}
-              {selectedLevels.includes(level) && (
-                <MaterialIcons name="check" size={18} color="#fff" style={styles.checkIcon} />
-              )}
-            </Button>
-          ))}
-        </View>
+      <View style={styles.headerContainer}>
+        <MaterialIcons name="sports-tennis" size={40} color={AppStyles.Colors.primary} />
+        <ThemedText useMaterialStyle type="headlineMedium" style={styles.title}>
+          Level Preferences
+        </ThemedText>
+        <ThemedText useMaterialStyle type="bodyLarge" style={styles.subtitle}>
+          Select all skill levels you're willing to play with
+        </ThemedText>
+      </View>
 
-        <View style={styles.footerContainer}>
-          <ThemedText style={styles.infoText}>
-            This helps us find partners that match your playing preferences
-          </ThemedText>
-          <Button
-            mode="contained"
-            disabled={selectedLevels.length === 0 || isLoading}
-            loading={isLoading}
-            onPress={handleSave}
-            style={styles.saveButton}
-          >
-            Save Preferences
-          </Button>
-        </View>
-      </ThemedView>
-    </ImageBackground>
+      <View style={styles.buttonContainer}>
+        {skillLevels.map((level) => (
+          <MaterialButton
+            key={level}
+            title={level}
+            variant={selectedLevels.includes(level) ? "filled" : "outlined"}
+            onPress={() => handleLevelSelection(level)}
+            style={styles.levelButton}
+            leftIcon={
+              selectedLevels.includes(level) ? (
+                <MaterialIcons name="check" size={18} color={AppStyles.Colors.onPrimary} />
+              ) : null
+            }
+          />
+        ))}
+      </View>
+
+      <View style={styles.footerContainer}>
+        <ThemedText useMaterialStyle type="bodyMedium" style={styles.infoText}>
+          This helps us find partners that match your playing preferences
+        </ThemedText>
+        <MaterialButton
+          title="Save Preferences"
+          disabled={selectedLevels.length === 0 || isLoading}
+          loading={isLoading}
+          onPress={handleSave}
+          style={styles.saveButton}
+          fullWidth
+        />
+      </View>
+    </ThemedView>
   );
 };
 
 const styles = StyleSheet.create({
-  backgroundImage: {
-    flex: 1,
-  },
   container: {
     flex: 1,
-    padding: 20,
+    padding: AppStyles.Spacing.l,
     justifyContent: "space-between",
+  },
+  backgroundImage: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.15,
+    zIndex: -1,
   },
   headerContainer: {
     alignItems: "center",
-    marginTop: 20,
+    marginTop: AppStyles.Spacing.l,
   },
   title: {
-    fontSize: 28,
-    fontWeight: "bold",
-    marginTop: 10,
-    color: "#863f9c",
+    marginTop: AppStyles.Spacing.s,
     textAlign: "center",
   },
   subtitle: {
-    fontSize: 16,
-    marginTop: 8,
-    marginBottom: 20,
+    marginTop: AppStyles.Spacing.xs,
+    marginBottom: AppStyles.Spacing.l,
     textAlign: "center",
-    opacity: 0.8,
+    color: AppStyles.Colors.onSurfaceVariant,
   },
   buttonContainer: {
     width: "100%",
     alignItems: "center",
-    marginVertical: 20,
+    marginVertical: AppStyles.Spacing.l,
   },
   levelButton: {
-    marginVertical: 8,
-    width: "90%",
-    height: 50,
-    justifyContent: "center",
-    borderColor: "#c4a8ff",
-    borderWidth: 1.5,
-  },
-  buttonLabel: {
-    fontSize: 16,
-    color: "#333",
-  },
-  selectedButton: {
-    backgroundColor: "#863f9c",
-    borderColor: "#7e22ce",
-  },
-  selectedButtonLabel: {
-    color: "white",
-    fontWeight: "bold",
-  },
-  checkIcon: {
-    marginLeft: 8,
+    marginVertical: AppStyles.Spacing.xs,
+    width: "100%",
   },
   footerContainer: {
     width: "100%",
     alignItems: "center",
-    marginBottom: 30,
+    marginBottom: AppStyles.Spacing.xl,
   },
   infoText: {
     textAlign: "center",
-    marginBottom: 15,
-    opacity: 0.7,
-    fontSize: 14,
-    paddingHorizontal: 20,
+    marginBottom: AppStyles.Spacing.m,
+    color: AppStyles.Colors.onSurfaceVariant,
+    paddingHorizontal: AppStyles.Spacing.l,
   },
   saveButton: {
-    width: "90%",
-    height: 50,
-    justifyContent: "center",
-    backgroundColor: "#863f9c",
+    marginTop: AppStyles.Spacing.s,
   },
 });
 

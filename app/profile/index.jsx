@@ -151,8 +151,9 @@ const ProfileScreen = () => {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <ImageBackground
-        source={require("@/assets/images/background.png")}
+        source={require("@/assets/images/bg.png")}
         style={styles.container}
+        imageStyle={{ opacity: 0.15 }}
       >
         <Provider>
           <View style={styles.container}>

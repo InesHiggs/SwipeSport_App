@@ -1,16 +1,13 @@
-import { View, TextInput, Text, StyleSheet, Button, ActivityIndicator, KeyboardAvoidingView } from 'react-native';
-import React, { useState, Component } from 'react';
+import { View, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
+import React, { useState } from 'react';
 import { FIREBASE_AUTH } from '@/FirebaseConfig';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth'; 
-import {getFirestore, doc, setDoc} from "firebase/firestore";
-import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import {useRouter} from "expo-router";
-
-type AuthStackParamList = {
-    Login: undefined;
-    SignUp: undefined;
-};
+import { signInWithEmailAndPassword } from 'firebase/auth'; 
+import { useRouter } from "expo-router";
+import { ThemedView } from '@/components/ThemedView';
+import { ThemedText } from '@/components/ThemedText';
+import MaterialTextInput from '@/components/MaterialTextInput';
+import MaterialButton from '@/components/MaterialButton';
+import { AppStyles } from '@/constants/AppStyles';
 
 
 //type LoginScreenNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'Login'>;

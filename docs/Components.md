@@ -121,6 +121,33 @@ These are more general UI components located in the `/components/` directory.
 - `headerComponent`: Component to display in parallax header
 - `parallaxHeight`: Height of the parallax header
 
+### Navbar
+
+**Path:** `/components/Navbar.jsx`
+
+**Implementation:**
+- Main bottom tab navigation component used in app's root layout
+- Provides consistent navigation experience across all authenticated screens
+- Shows active route with a top border and color highlight
+- Fixed at bottom of screen in root layout
+- Built with Ionicons for visual navigation icons
+
+**Props:**
+- `title`: Optional custom title to show (not currently used in bottom tab layout)
+
+**Styling:**
+- Fixed to bottom of screen
+- Active tab indicated with top border and purple color
+- Consistent with iOS/Android bottom tab navigation patterns
+- Safe area compatible for iOS notch support
+
+**Navigation Items:**
+- Home: Routes to `/`
+- Find: Routes to `/meet`
+- Chats: Routes to `/chats`
+- People: Routes to `/accepted_people`
+- Profile: Routes to `/profile`
+
 ### UI Components
 
 **Path:** `/components/ui/`

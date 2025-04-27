@@ -31,6 +31,7 @@ import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
 import { ActivityIndicator } from 'react-native-paper';
 import { router } from 'expo-router';
+import { AppStyles } from '@/constants/AppStyles';
 
 // Type guard for User data from Firestore
 function isUser(data: DocumentData | undefined): data is User {
@@ -59,6 +60,7 @@ const initialDimensions: ScaledSize = {
 
 type Styles = {
   container: ViewStyle;
+  backgroundImage: ImageStyle;
   loadingContainer: ViewStyle;
   noMatchesContainer: ViewStyle;
   noMoreMatchesContainer: ViewStyle;
@@ -78,40 +80,38 @@ const createStyles = (dimensions: ScaledSize): Styles => StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: AppStyles.Colors.surface,
+  },
+  backgroundImage: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.15,
+    zIndex: -1,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 20,
+    gap: AppStyles.Spacing.l,
   },
   noMatchesContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: AppStyles.Spacing.l,
   },
   noMoreMatchesContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: AppStyles.Spacing.l,
   },
   card: {
     width: dimensions.width * 0.9,
     height: dimensions.height * 0.7,
-    borderRadius: 20,
+    borderRadius: AppStyles.BorderRadius.l,
     position: 'absolute',
-    backgroundColor: 'white',
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 3,
-    },
-    shadowOpacity: 0.29,
-    shadowRadius: 4.65,
-    elevation: 7,
+    backgroundColor: AppStyles.Colors.surface,
+    ...AppStyles.Shadows.large,
     overflow: 'hidden',
   },
   cardImage: {
@@ -126,21 +126,21 @@ const createStyles = (dimensions: ScaledSize): Styles => StyleSheet.create({
     bottom: 0,
     height: '30%',
     justifyContent: 'flex-end',
-    padding: 15,
+    padding: AppStyles.Spacing.m,
   },
   cardInfo: {
     alignItems: 'flex-start',
   },
   cardName: {
-    fontSize: 28,
+    fontSize: AppStyles.Typography.bodyText.headlineMedium.fontSize,
     fontWeight: 'bold',
     color: 'white',
-    marginBottom: 5,
+    marginBottom: AppStyles.Spacing.xs,
   },
   cardDetails: {
-    fontSize: 18,
+    fontSize: AppStyles.Typography.bodyText.bodyLarge.fontSize,
     color: 'white',
-    marginBottom: 3,
+    marginBottom: AppStyles.Spacing.xxs,
   },
   likeBadge: {
     position: 'absolute',
@@ -158,11 +158,11 @@ const createStyles = (dimensions: ScaledSize): Styles => StyleSheet.create({
   },
   badgeText: {
     borderWidth: 3,
-    borderColor: '#00FF44',
-    color: '#00FF44',
-    fontSize: 32,
+    borderColor: AppStyles.Colors.liked,
+    color: AppStyles.Colors.liked,
+    fontSize: AppStyles.Typography.bodyText.displaySmall.fontSize,
     fontWeight: 'bold',
-    padding: 10,
+    padding: AppStyles.Spacing.s,
   },
 });
 
@@ -265,7 +265,10 @@ export default function MeetScreen() {
       position.setValue({ x: 0, y: 0 });
 
       if (direction === 'right' && swipedProfile) {
-        router.push(`/chats/${swipedProfile.uid}`);
+        router.push({
+          pathname: `/chats/${swipedProfile.uid}`,
+          params: { type: 'new' }
+        });
       }
     });
   };
@@ -326,6 +329,12 @@ export default function MeetScreen() {
   if (loading) {
     return (
       <ThemedView style={styles.loadingContainer}>
+        {/* Background image */}
+        <RNImage 
+          source={require('@/assets/images/bg.png')} 
+          style={styles.backgroundImage} 
+          resizeMode="cover"
+        />
         <ActivityIndicator size="large" color="#863f9c" />
         <ThemedText>Finding your matches...</ThemedText>
       </ThemedView>
@@ -335,6 +344,12 @@ export default function MeetScreen() {
   if (profiles.length === 0) {
     return (
       <ThemedView style={styles.noMatchesContainer}>
+        {/* Background image */}
+        <RNImage 
+          source={require('@/assets/images/bg.png')} 
+          style={styles.backgroundImage} 
+          resizeMode="cover"
+        />
         <ThemedText type="title">No Matches Found</ThemedText>
         <ThemedText>We couldn't find any sports partners matching your preferences.</ThemedText>
       </ThemedView>
@@ -344,6 +359,12 @@ export default function MeetScreen() {
   if (currentIndex >= profiles.length) {
     return (
       <ThemedView style={styles.noMoreMatchesContainer}>
+        {/* Background image */}
+        <RNImage 
+          source={require('@/assets/images/bg.png')} 
+          style={styles.backgroundImage} 
+          resizeMode="cover"
+        />
         <ThemedText type="title">No More Matches</ThemedText>
         <ThemedText>You've seen all potential sports partners for now.</ThemedText>
       </ThemedView>
@@ -352,6 +373,13 @@ export default function MeetScreen() {
 
   return (
     <ThemedView style={styles.container}>
+      {/* Background image */}
+      <RNImage 
+        source={require('@/assets/images/bg.png')} 
+        style={styles.backgroundImage} 
+        resizeMode="cover"
+      />
+      
       {currentIndex < profiles.length - 1 && (
         <Animated.View
           style={[

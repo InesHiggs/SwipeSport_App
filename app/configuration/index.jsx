@@ -1,7 +1,11 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet } from "react-native";
-import { Button } from "react-native-paper";
+import { View, StyleSheet, Image } from "react-native";
 import { useRouter } from "expo-router";
+import { ThemedView } from '@/components/ThemedView';
+import { ThemedText } from '@/components/ThemedText';
+import MaterialButton from '@/components/MaterialButton';
+import { AppStyles } from '@/constants/AppStyles';
+import { MaterialIcons } from "@expo/vector-icons";
 
 const ConfigurationScreen = () => {
   const [selectedLevel, setSelectedLevel] = useState(null);
@@ -10,34 +14,46 @@ const ConfigurationScreen = () => {
   const skillLevels = ["Beginner", "Intermediate", "Advanced", "Professional", "Expert"];
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Tennis Skill Level</Text>
-      <Text style={styles.subtitle}>Please select your level</Text>
+    <ThemedView useMaterialBackground style={styles.container}>
+      {/* Background image */}
+      <Image 
+        source={require('@/assets/images/bg.png')} 
+        style={styles.backgroundImage} 
+        resizeMode="cover"
+      />
+      
+      <ThemedText useMaterialStyle type="headlineMedium" style={styles.title}>
+        Tennis Skill Level
+      </ThemedText>
+      
+      <ThemedText useMaterialStyle type="bodyLarge" style={styles.subtitle}>
+        Please select your level
+      </ThemedText>
 
       <View style={styles.buttonContainer}>
         {skillLevels.map((level, index) => (
-          <Button
+          <MaterialButton
             key={index}
-            mode="contained"
+            title={level}
+            variant={selectedLevel === level ? "filled" : "outlined"}
             onPress={() => setSelectedLevel(level)}
-            style={[
-              styles.button,
-              selectedLevel === level && styles.selectedButton,
-            ]}
-          >
-            {level}
-          </Button>
+            style={styles.button}
+            leftIcon={
+              selectedLevel === level ? (
+                <MaterialIcons name="check" size={18} color={AppStyles.Colors.onPrimary} />
+              ) : null
+            }
+          />
         ))}
       </View>
 
-      <Button
-        mode="outlined"
-        style={styles.oppLevelButton}
+      <MaterialButton
+        title="Opponent's Level"
+        variant="outlined"
         onPress={() => router.push("/opponent_level")}
-      >
-        Opponent's Level
-      </Button>
-    </View>
+        style={styles.oppLevelButton}
+      />
+    </ThemedView>
   );
 };
 
@@ -46,32 +62,33 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    padding: 20,
-    backgroundColor: "#fff",
+    padding: AppStyles.Spacing.l,
+  },
+  backgroundImage: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.15,
+    zIndex: -1,
   },
   title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 10,
+    marginBottom: AppStyles.Spacing.s,
+    textAlign: 'center',
   },
   subtitle: {
-    fontSize: 16,
-    marginBottom: 20,
+    marginBottom: AppStyles.Spacing.l,
+    textAlign: 'center',
+    color: AppStyles.Colors.onSurfaceVariant,
   },
   buttonContainer: {
     width: "100%",
-    justifyContent: "center",
     alignItems: "center",
+    gap: AppStyles.Spacing.s,
   },
   button: {
-    marginVertical: 5,
+    marginVertical: AppStyles.Spacing.xs,
     width: "80%",
   },
-  selectedButton: {
-    backgroundColor: "#6200ee", // Highlight color when selected
-  },
   oppLevelButton: {
-    marginTop: 20,
+    marginTop: AppStyles.Spacing.xl,
     width: "80%",
   },
 });

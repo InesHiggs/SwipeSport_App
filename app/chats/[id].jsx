@@ -1,11 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard } from 'react-native';
+import { View, TextInput, FlatList, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import MessageBubble from '@/app/components/MessageBubble';
 import { getAuth } from 'firebase/auth';
 import { collection, getDocs, addDoc, doc, getDoc, setDoc, query, orderBy, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import { FIRESTORE_DB } from '@/FirebaseConfig';
 import { useLocalSearchParams } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { ThemedView } from '@/components/ThemedView';
+import { ThemedText } from '@/components/ThemedText';
+import { AppStyles } from '@/constants/AppStyles';
 
 const ChatPage = () => {
   const router = useRouter();
@@ -116,12 +120,21 @@ const ChatPage = () => {
       keyboardVerticalOffset={130}
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <View style={styles.container}>
+        <ThemedView useMaterialBackground style={styles.container}>
+          {/* Background image */}
+          <Image 
+            source={require('@/assets/images/bg.png')} 
+            style={styles.backgroundImage} 
+            resizeMode="cover"
+          />
+          
           <View style={styles.header}>
             <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-              <Text style={styles.backText}>← Back</Text>
+              <Ionicons name="arrow-back" size={24} color={AppStyles.Colors.primary} />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>{otherUserName}</Text>
+            <ThemedText useMaterialStyle type="titleMedium" style={styles.headerTitle}>
+              {otherUserName}
+            </ThemedText>
             <View style={styles.headerRight} />
           </View>
 
@@ -144,10 +157,10 @@ const ChatPage = () => {
               onSubmitEditing={sendMessage}
             />
             <TouchableOpacity style={styles.sendButton} onPress={sendMessage}>
-              <Text style={styles.sendButtonText}>Send</Text>
+              <Ionicons name="send" size={24} color={AppStyles.Colors.onPrimary} />
             </TouchableOpacity>
           </View>
-        </View>
+        </ThemedView>
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
   );
@@ -156,63 +169,61 @@ const ChatPage = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f4f4f4',
+  },
+  backgroundImage: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.15,
+    zIndex: -1,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 15,
-    backgroundColor: '#fff',
+    padding: AppStyles.Spacing.m,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: AppStyles.Colors.divider,
+    ...AppStyles.Shadows.small,
   },
   backButton: {
-    width: 60,
-  },
-  backText: {
-    fontSize: 16,
-    color: '#007bff',
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
     flex: 1,
     textAlign: 'center',
   },
   headerRight: {
-    width: 60,
+    width: 40,
   },
   messagesList: {
-    padding: 15,
+    padding: AppStyles.Spacing.m,
   },
   inputContainer: {
     flexDirection: 'row',
-    padding: 10,
-    backgroundColor: '#fff',
+    padding: AppStyles.Spacing.s,
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+    borderTopColor: AppStyles.Colors.divider,
     alignItems: 'center',
   },
   input: {
     flex: 1,
-    fontSize: 16,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    backgroundColor: '#f8f8f8',
-    borderRadius: 20,
-    marginRight: 10,
+    fontSize: AppStyles.Typography.bodyText.bodyLarge.fontSize,
+    paddingVertical: AppStyles.Spacing.xs,
+    paddingHorizontal: AppStyles.Spacing.m,
+    backgroundColor: AppStyles.Colors.surfaceVariant,
+    borderRadius: AppStyles.BorderRadius.full,
+    marginRight: AppStyles.Spacing.s,
   },
   sendButton: {
-    backgroundColor: '#007bff',
-    paddingVertical: 8,
-    paddingHorizontal: 15,
+    width: 40,
+    height: 40,
+    backgroundColor: AppStyles.Colors.primary,
     borderRadius: 20,
-  },
-  sendButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '500',
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...AppStyles.Shadows.small,
   },
 });
 

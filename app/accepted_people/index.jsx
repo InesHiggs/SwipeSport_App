@@ -1,6 +1,9 @@
 import React from 'react';
-import { View, Text, FlatList, StyleSheet } from 'react-native';
-import PersonCard from '@/app/components/PersonCard'; // Import the PersonCard component
+import { View, FlatList, StyleSheet, Image } from 'react-native';
+import PersonCard from '@/app/components/PersonCard';
+import { ThemedView } from '@/components/ThemedView';
+import { ThemedText } from '@/components/ThemedText';
+import { AppStyles } from '@/constants/AppStyles';
 
 // Hardcoded accepted people
 const acceptedPeople = [
@@ -11,8 +14,15 @@ const acceptedPeople = [
 
 const AcceptedPeoplePage = () => {
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Accepted People</Text>
+    <ThemedView useMaterialBackground style={styles.container}>
+      {/* Background image */}
+      <Image 
+        source={require('@/assets/images/bg.png')} 
+        style={styles.backgroundImage} 
+        resizeMode="cover"
+      />
+      
+      <ThemedText useMaterialStyle type="headlineMedium" style={styles.title}>Accepted People</ThemedText>
       <FlatList
         data={acceptedPeople}
         keyExtractor={(item) => item.id.toString()}
@@ -20,21 +30,24 @@ const AcceptedPeoplePage = () => {
           <PersonCard name={item.name} level={item.level} age={item.age} image={item.image} />
         )}
       />
-    </View>
+    </ThemedView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f4f4f4',
-    padding: 20,
+    padding: AppStyles.Spacing.m,
+    paddingTop: 80, // Added padding to account for navbar
+  },
+  backgroundImage: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.15,
+    zIndex: -1,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: AppStyles.Spacing.l,
   },
 });
 

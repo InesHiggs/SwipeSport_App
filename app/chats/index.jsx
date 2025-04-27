@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { View, FlatList, StyleSheet } from 'react-native';
+import { View, FlatList, StyleSheet, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { FIREBASE_AUTH, FIRESTORE_DB } from '@/FirebaseConfig';
 import { collection, query, getDocs, doc, getDoc } from 'firebase/firestore';
 import ChatItem from '../components/ChatItem';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
+import { ThemedView } from '@/components/ThemedView';
+import { ThemedText } from '@/components/ThemedText';
+import { AppStyles } from '@/constants/AppStyles';
 
 const ChatsPage = () => {
   const [chats, setChats] = useState([]);
@@ -73,27 +76,63 @@ const ChatsPage = () => {
   };
   
   return (
-    <View style={styles.container}>
-      <FlatList
-        data={chats}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <ChatItem chat={item} />
-        )}
-        style={styles.list}
+    <ThemedView useMaterialBackground style={styles.container}>
+      {/* Background image */}
+      <Image 
+        source={require('@/assets/images/bg.png')} 
+        style={styles.backgroundImage} 
+        resizeMode="cover"
       />
-    </View>
+      
+      {chats.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <ThemedText useMaterialStyle type="titleMedium" style={styles.emptyText}>
+            No conversations yet
+          </ThemedText>
+          <ThemedText useMaterialStyle type="bodyMedium" style={styles.emptySubtext}>
+            Start matching with people to begin chatting
+          </ThemedText>
+        </View>
+      ) : (
+        <FlatList
+          data={chats}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <ChatItem chat={item} />
+          )}
+          style={styles.list}
+        />
+      )}
+    </ThemedView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+  },
+  backgroundImage: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.15,
+    zIndex: -1,
   },
   list: {
     flex: 1,
   },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: AppStyles.Spacing.xl,
+  },
+  emptyText: {
+    marginBottom: AppStyles.Spacing.s,
+    textAlign: 'center',
+  },
+  emptySubtext: {
+    textAlign: 'center',
+    color: AppStyles.Colors.onSurfaceVariant,
+  }
 });
 
 export default ChatsPage;
