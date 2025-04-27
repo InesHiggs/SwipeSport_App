@@ -36,6 +36,17 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "fonts": [
+      {
+        "asset": "./assets/fonts/PlayfairDisplay-VariableFont_wght.ttf"
+      },
+      {
+        "asset": "./assets/fonts/PlayfairDisplay-Italic-VariableFont_wght.ttf"
+      },
+      {
+        "asset": "./assets/fonts/SpaceMono-Regular.ttf"
+      }
+    ]
   }
 }

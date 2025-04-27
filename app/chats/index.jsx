@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { FIREBASE_AUTH, FIRESTORE_DB } from '@/FirebaseConfig';
 import { collection, query, getDocs, doc, getDoc } from 'firebase/firestore';
 import ChatItem from '../components/ChatItem';
+import MessagesHeader from '../components/MessagesHeader';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
@@ -83,6 +84,9 @@ const ChatsPage = () => {
         style={styles.backgroundImage} 
         resizeMode="cover"
       />
+      
+      {/* Messages Header */}
+      <MessagesHeader />
       
       {chats.length === 0 ? (
         <View style={styles.emptyContainer}>
