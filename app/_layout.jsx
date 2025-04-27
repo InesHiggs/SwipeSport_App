@@ -15,7 +15,7 @@ const RootLayout = () => {
       if(!user){
         router.replace("/auth/login"); //If user not authenticated -> login page
       } else{
-        router.replace("/"); //Go to home page if auth
+        router.replace("/meet"); //Go to find/meet page as default
       }
     });
     return () => unsubscribe();
@@ -29,7 +29,7 @@ const RootLayout = () => {
                 <Stack.Screen name="profile" />
                 <Stack.Screen name="chats" />
                 <Stack.Screen name="match" />
-                <Stack.Screen name="meet" />
+                <Stack.Screen name="meet" options={{ headerTitle: "Find" }} />
                 <Stack.Screen name="accepted_people" />
                 <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
               </>

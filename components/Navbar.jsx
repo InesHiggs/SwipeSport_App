@@ -19,8 +19,8 @@ export default function Navbar({ title }) {
     return pathname.startsWith(path);
   };
 
+  // Update to remove the home tab and make find the home
   const navItems = [
-    { name: 'Home', path: '/', icon: 'home' },
     { name: 'Find', path: '/meet', icon: 'search' },
     { name: 'Chats', path: '/chats', icon: 'chatbubbles' },
     { name: 'People', path: '/accepted_people', icon: 'people' },

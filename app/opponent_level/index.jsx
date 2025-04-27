@@ -69,7 +69,7 @@ const OpponentLevelPage = () => {
       <MaterialButton
         title="Done"
         variant="filled"
-        onPress={() => router.push('/')}
+        onPress={() => router.push('/meet')}
         style={styles.doneButton}
       />
     </ThemedView>
