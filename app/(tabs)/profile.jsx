@@ -78,54 +78,82 @@ const FirebaseProfileImage = ({ userId, style, defaultImage }) => {
   const [error, setError] = useState(false);
   const [loadAttempts, setLoadAttempts] = useState(0);
 
-  // Function to check if the image exists in Firebase Storage
   useEffect(() => {
-    const fetchFreshImageUrl = async () => {
+    let isMounted = true;
+
+    const fetchImage = async () => {
       if (!userId) {
-        console.log("No userId provided for image fetch");
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+          setError(true);
+        }
         return;
       }
 
       try {
-        console.log(
-          `Attempting to fetch image for userId: ${userId} (attempt ${
-            loadAttempts + 1
-          })`
-        );
         setLoading(true);
-
         const storage = getStorage();
+        // Add cache-busting timestamp to prevent stale images
+        const timestamp = new Date().getTime();
         const imageRef = ref(storage, `profile_images/${userId}`);
 
-        // Try to get the download URL - this will throw an error if the image doesn't exist
         const url = await getDownloadURL(imageRef);
-        console.log("✅ Success! Firebase image URL fetched:", url);
-        setImageUrl(url);
-        setError(false);
-      } catch (err) {
-        // Check if the error is because the image doesn't exist
-        if (err.code === "storage/object-not-found") {
+
+        // Add a cache-busting parameter
+        const urlWithTimestamp = `${url}?t=${timestamp}`;
+
+        if (isMounted) {
           console.log(
-            "❌ Image not found in Firebase Storage - no profile picture has been uploaded yet"
+            "Successfully fetched image:",
+            urlWithTimestamp.substring(0, 100) + "..."
           );
-        } else {
-          console.error(
-            "❌ Firebase image fetch error:",
-            err.code,
-            err.message
-          );
+          setImageUrl(urlWithTimestamp);
+          setError(false);
+          setLoading(false);
         }
-        setError(true);
-      } finally {
-        setLoading(false);
+      } catch (err) {
+        console.log("Image fetch error:", err.code || err.message);
+
+        // Try to get the image from Firestore if Storage fails
+        try {
+          if (isMounted && userId) {
+            const userDoc = await getDoc(doc(FIREBASE_DB, "users", userId));
+            if (userDoc.exists()) {
+              const userData = userDoc.data();
+              const photoUrl = userData.photoURL || userData.photo;
+
+              if (photoUrl) {
+                console.log("Retrieved image URL from Firestore");
+                setImageUrl(photoUrl);
+                setError(false);
+                setLoading(false);
+                return;
+              }
+            }
+          }
+        } catch (firestoreErr) {
+          console.log("Firestore backup fetch failed:", firestoreErr);
+        }
+
+        if (isMounted) {
+          setError(true);
+          setLoading(false);
+        }
       }
     };
 
-    fetchFreshImageUrl();
+    fetchImage();
+
+    return () => {
+      isMounted = false;
+    };
   }, [userId, loadAttempts]);
 
-  // Render functions
+  // Simple retry handler
+  const handleRetry = () => {
+    setLoadAttempts((prev) => prev + 1);
+  };
+
   if (loading) {
     return (
       <View style={[{ justifyContent: "center", alignItems: "center" }, style]}>
@@ -138,45 +166,35 @@ const FirebaseProfileImage = ({ userId, style, defaultImage }) => {
   }
 
   if (error || !imageUrl) {
-    // Show default image with retry option
     return (
       <TouchableOpacity
         style={[{ justifyContent: "center", alignItems: "center" }, style]}
-        onPress={() => setLoadAttempts((prev) => prev + 1)}
+        onPress={handleRetry}
       >
         <Image source={defaultImage} style={style} resizeMode="cover" />
-        {error && (
-          <View
-            style={{
-              position: "absolute",
-              bottom: 0,
-              backgroundColor: "rgba(0,0,0,0.6)",
-              width: "100%",
-              padding: 3,
-            }}
-          >
-            <Text style={{ color: "#fff", fontSize: 10, textAlign: "center" }}>
-              Tap to retry
-            </Text>
-          </View>
-        )}
+        <View
+          style={{
+            position: "absolute",
+            bottom: 0,
+            backgroundColor: "rgba(0,0,0,0.6)",
+            width: "100%",
+            padding: 3,
+          }}
+        >
+          <Text style={{ color: "#fff", fontSize: 10, textAlign: "center" }}>
+            Tap to load image
+          </Text>
+        </View>
       </TouchableOpacity>
     );
   }
 
-  // If we have a valid URL, show the image with proper error handling
   return (
     <Image
       source={{ uri: imageUrl }}
       style={style}
       resizeMode="cover"
-      onLoadStart={() => console.log("Image loading started:", imageUrl)}
-      onLoad={() => console.log("Image loaded successfully")}
-      onError={(e) => {
-        console.log("Image load error:", e.nativeEvent.error);
-        // If there's an error loading the image after we got a URL, show an error state
-        setError(true);
-      }}
+      onError={() => setError(true)}
     />
   );
 };
@@ -202,6 +220,11 @@ const ProfileScreen = () => {
 
   // New state variable for proficiency level dropdown
   const [proficiencyModalVisible, setProficiencyModalVisible] = useState(false);
+
+  // Add a new state variable for opponent proficiency level
+  const [opponentProficiencyLevel, setOpponentProficiencyLevel] = useState("");
+  const [opponentProficiencyModalVisible, setOpponentProficiencyModalVisible] =
+    useState(false);
 
   const router = useRouter();
 
@@ -276,6 +299,7 @@ const ProfileScreen = () => {
           setSelectedEmoji(emojiEntry ? emojiEntry[0] : "");
 
           setProficiencyLevel(userData.proficiencyLevel || "");
+          setOpponentProficiencyLevel(userData.opponentProficiencyLevel || "");
           setAvailability(
             Array.isArray(availabilityData) ? availabilityData : []
           );
@@ -345,6 +369,14 @@ const ProfileScreen = () => {
     setHasUnsavedChanges(true);
   };
 
+  // Handler for opponent proficiency selection
+  const handleSelectOpponentProficiency = (level) => {
+    setOpponentProficiencyLevel(level);
+    setOpponentProficiencyModalVisible(false);
+    setHasUnsavedChanges(true);
+  };
+
+  // 1. First, modify the handleUpdateProfile function to properly save image URLs
   const handleUpdateProfile = async () => {
     if (!userId) {
       Alert.alert("Error", "User not authenticated");
@@ -365,20 +397,19 @@ const ProfileScreen = () => {
           const response = await fetch(image);
           const blob = await response.blob();
 
-          // Upload the image with metadata that prevents caching
+          // Upload the image
           await uploadBytes(imageRef, blob, {
             contentType: "image/jpeg",
-            customMetadata: {
-              "Cache-Control": "no-cache, no-store, must-revalidate",
-            },
           });
 
-          // Get download URL
-          newImageUrl = await getDownloadURL(imageRef);
+          // Get download URL with cache-busting query parameter
+          newImageUrl =
+            (await getDownloadURL(imageRef)) + `?t=${new Date().getTime()}`;
           console.log("Upload successful, new image URL:", newImageUrl);
 
           // After successful upload, we're no longer using a local image
           setIsLocalImage(false);
+          setImage(newImageUrl); // Important: update the local state with the cloud URL
         } catch (error) {
           console.error("Error uploading image:", error);
           Alert.alert("Error", "Failed to upload profile picture");
@@ -393,7 +424,8 @@ const ProfileScreen = () => {
       const updates = {
         userAvailability: availability,
         lastUpdated: new Date().toISOString(),
-        proficiencyLevel: proficiencyLevel, // Include proficiency level in updates
+        proficiencyLevel: proficiencyLevel,
+        opponentProficiencyLevel: opponentProficiencyLevel,
       };
 
       // Add sport updates if we have a selected sport
@@ -404,8 +436,8 @@ const ProfileScreen = () => {
 
       // Only add the image fields if we have a new image
       if (newImageUrl) {
-        updates.photo = newImageUrl;
         updates.photoURL = newImageUrl;
+        updates.photo = newImageUrl;
       }
 
       await updateDoc(userRef, updates);
@@ -551,31 +583,60 @@ const ProfileScreen = () => {
               </View>
 
               {/* Proficiency Level - Updated to be editable */}
-              <View style={styles.inputContainer}>
-                <Text style={styles.label}>Proficiency Level</Text>
-                <TouchableOpacity
-                  style={styles.dropdownField}
-                  onPress={() => setProficiencyModalVisible(true)}
-                >
-                  <View style={styles.dropdownContent}>
-                    {proficiencyLevel && (
-                      <MaterialIcons
-                        name={getProficiencyIcon(proficiencyLevel)}
-                        size={20}
-                        color={Colors.light.text}
-                        style={styles.proficiencyIcon}
-                      />
-                    )}
-                    <Text style={styles.displayText}>
-                      {proficiencyLevel || "Select your level"}
-                    </Text>
-                  </View>
-                  <MaterialIcons
-                    name="arrow-drop-down"
-                    size={24}
-                    color={Colors.light.textSecondary}
-                  />
-                </TouchableOpacity>
+              <View style={styles.proficiencyContainer}>
+                <View style={styles.proficiencyHalf}>
+                  <Text style={styles.label}>My Proficiency Level</Text>
+                  <TouchableOpacity
+                    style={styles.dropdownField}
+                    onPress={() => setProficiencyModalVisible(true)}
+                  >
+                    <View style={styles.dropdownContent}>
+                      {proficiencyLevel && (
+                        <MaterialIcons
+                          name={getProficiencyIcon(proficiencyLevel)}
+                          size={20}
+                          color={Colors.light.text}
+                          style={styles.proficiencyIcon}
+                        />
+                      )}
+                      <Text style={styles.displayText}>
+                        {proficiencyLevel || "Select"}
+                      </Text>
+                    </View>
+                    <MaterialIcons
+                      name="arrow-drop-down"
+                      size={24}
+                      color={Colors.light.textSecondary}
+                    />
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.proficiencyHalf}>
+                  <Text style={styles.label}>Opponent's Proficiency Level</Text>
+                  <TouchableOpacity
+                    style={styles.dropdownField}
+                    onPress={() => setOpponentProficiencyModalVisible(true)}
+                  >
+                    <View style={styles.dropdownContent}>
+                      {opponentProficiencyLevel && (
+                        <MaterialIcons
+                          name={getProficiencyIcon(opponentProficiencyLevel)}
+                          size={20}
+                          color={Colors.light.text}
+                          style={styles.proficiencyIcon}
+                        />
+                      )}
+                      <Text style={styles.displayText}>
+                        {opponentProficiencyLevel || "Select"}
+                      </Text>
+                    </View>
+                    <MaterialIcons
+                      name="arrow-drop-down"
+                      size={24}
+                      color={Colors.light.textSecondary}
+                    />
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
 
@@ -724,6 +785,68 @@ const ProfileScreen = () => {
                         {item.level}
                       </Text>
                       {proficiencyLevel === item.level && (
+                        <MaterialIcons
+                          name="check"
+                          size={20}
+                          color={Colors.light.primary}
+                        />
+                      )}
+                    </TouchableOpacity>
+                  )}
+                  style={styles.proficiencyList}
+                />
+              </View>
+            </View>
+          </Modal>
+
+          {/* Add this new modal */}
+          <Modal
+            animationType="slide"
+            transparent={true}
+            visible={opponentProficiencyModalVisible}
+            onRequestClose={() => setOpponentProficiencyModalVisible(false)}
+          >
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalContent}>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>
+                    Select Opponent Proficiency Level
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => setOpponentProficiencyModalVisible(false)}
+                  >
+                    <MaterialIcons
+                      name="close"
+                      size={24}
+                      color={Colors.light.text}
+                    />
+                  </TouchableOpacity>
+                </View>
+
+                <FlatList
+                  data={proficiencyLevels}
+                  keyExtractor={(item) => item.level}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity
+                      style={[
+                        styles.proficiencyItem,
+                        opponentProficiencyLevel === item.level &&
+                          styles.selectedProficiencyItem,
+                      ]}
+                      onPress={() =>
+                        handleSelectOpponentProficiency(item.level)
+                      }
+                    >
+                      <MaterialIcons
+                        name={item.icon}
+                        size={24}
+                        color={Colors.light.text}
+                        style={styles.proficiencyItemIcon}
+                      />
+                      <Text style={styles.proficiencyItemText}>
+                        {item.level}
+                      </Text>
+                      {opponentProficiencyLevel === item.level && (
                         <MaterialIcons
                           name="check"
                           size={20}
@@ -1034,6 +1157,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     flex: 1,
     color: Colors.light.text,
+  },
+  proficiencyContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 16,
+  },
+  proficiencyHalf: {
+    width: "48%",
   },
 });
 
