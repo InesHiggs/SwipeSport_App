@@ -114,10 +114,10 @@ const ChatPage = () => {
   };
 
   return (
-      <KeyboardAvoidingView
+    <KeyboardAvoidingView
       style={{ flex: 1 }}
-      behavior={Platform.OS === 'ios' ? 'padding' : null}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 65 : 0}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 90}
     >
       <ThemedView useMaterialBackground style={styles.container}>
         {/* Background image */}
@@ -159,9 +159,6 @@ const ChatPage = () => {
                 placeholder="Type a message..."
                 returnKeyType="send"
                 onSubmitEditing={sendMessage}
-                multiline={true}
-                numberOfLines={Platform.OS === 'ios' ? null : 1}
-                maxHeight={100}
               />
               <TouchableOpacity style={styles.sendButton} onPress={sendMessage}>
                 <Ionicons name="send" size={24} color={AppStyles.Colors.onPrimary} />
@@ -177,7 +174,6 @@ const ChatPage = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    position: 'relative',
   },
   backgroundImage: {
     ...StyleSheet.absoluteFillObject,
@@ -208,55 +204,43 @@ const styles = StyleSheet.create({
   },
   chatContentContainer: {
     flex: 1,
-    marginBottom: Platform.OS === 'ios' ? 70 : 60, // Reduced space to move chatbox up
+    marginBottom: Platform.OS === 'ios' ? 0 : 50, // Create space for the navbar on Android
   },
   messagesList: {
     padding: AppStyles.Spacing.m,
-    paddingBottom: 180, // Reduced padding to ensure proper spacing
+    paddingBottom: 100, // Add padding at the bottom to ensure messages aren't hidden
   },
   inputOuterContainer: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    paddingBottom: Platform.OS === 'ios' ? 10 : 0, // Reduced padding to move up
+    paddingBottom: Platform.OS === 'ios' ? 30 : 60, // Padding for the navbar
     backgroundColor: 'transparent',
-    zIndex: 2, // Ensure input stays on top
   },
   inputContainer: {
     flexDirection: 'row',
-    padding: Platform.OS === 'ios' ? AppStyles.Spacing.m : AppStyles.Spacing.s, // Platform-specific padding
+    padding: AppStyles.Spacing.s,
     borderTopWidth: 1,
     borderTopColor: AppStyles.Colors.divider,
     alignItems: 'center',
     backgroundColor: AppStyles.Colors.surface,
-    ...Platform.select({
-      android: {
-        elevation: 4,
-      },
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: -2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 3,
-      }
-    }),
+    ...AppStyles.Shadows.small,
   },
   input: {
     flex: 1,
     fontSize: AppStyles.Typography.bodyText.bodyLarge.fontSize,
-    paddingVertical: AppStyles.Spacing.s, // Increased vertical padding for height
+    paddingVertical: AppStyles.Spacing.xs,
     paddingHorizontal: AppStyles.Spacing.m,
     backgroundColor: AppStyles.Colors.surfaceVariant,
     borderRadius: AppStyles.BorderRadius.full,
     marginRight: AppStyles.Spacing.s,
-    minHeight: Platform.OS === 'ios' ? 36 : 40, // Platform-specific height
   },
   sendButton: {
-    width: Platform.OS === 'ios' ? 38 : 42,
-    height: Platform.OS === 'ios' ? 38 : 42,
+    width: 40,
+    height: 40,
     backgroundColor: AppStyles.Colors.primary,
-    borderRadius: Platform.OS === 'ios' ? 19 : 21,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
     ...AppStyles.Shadows.small,
