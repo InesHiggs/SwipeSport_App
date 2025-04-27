@@ -26,7 +26,7 @@ const Login = () => {
         try{
             const response = await signInWithEmailAndPassword(auth, email, password);
             console.log("Login Successful", response);
-            router.replace("/");
+            router.replace("/meet");
         } catch(error: any) {
             console.log(error);
             alert('Sign in failed: ' + error.message);

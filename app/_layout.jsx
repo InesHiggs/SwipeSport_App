@@ -19,17 +19,17 @@ const RootLayout = () => {
       }
     });
     return () => unsubscribe();
-    }, []);    return (
+  }, []);    return (
       <View style={styles.container}>
         <View style={styles.content}>
           <Stack screenOptions={{ headerShown: false }}>
             {user ? (
               <>
+                <Stack.Screen name="meet" options={{ headerTitle: "Find" }} />
                 <Stack.Screen name="index" />
                 <Stack.Screen name="profile" />
                 <Stack.Screen name="chats" />
                 <Stack.Screen name="match" />
-                <Stack.Screen name="meet" options={{ headerTitle: "Find" }} />
                 <Stack.Screen name="accepted_people" />
                 <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
               </>

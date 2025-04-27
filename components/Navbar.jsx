@@ -13,6 +13,9 @@ export default function Navbar({ title }) {
   const activeColor = AppStyles.Colors.primary;
   
   const isActive = (path) => {
+    if (path === '/meet' && (pathname === '/' || pathname === '/meet')) {
+      return true;
+    }
     if (path === '/') {
       return pathname === path;
     }
