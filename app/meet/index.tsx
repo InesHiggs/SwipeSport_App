@@ -128,7 +128,8 @@ export default function MeetScreen() {
       position.setValue({ x: 0, y: 0 });
 
       if (direction === 'right' && swipedProfile) {
-        // When a user is liked, open chat directly with that person
+        // When a user likes a profile (swipes right), immediately open a chat with that person
+        console.log('Opening chat with:', swipedProfile.name, 'ID:', swipedProfile.uid);
         router.push({
           pathname: "/chats/[id]",
           params: { id: swipedProfile.uid, type: 'new' }
